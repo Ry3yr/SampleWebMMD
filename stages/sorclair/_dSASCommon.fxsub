@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////
 //
-//  dSkinSASCommon.fxsub ver1.00 (ドゥドゥ)
+//  _dSASCommon.fxsub ver1.00 (ドゥドゥ)
 //  
 //  お借りしたプログラムの一覧と派生図の様なものです。ありがとうございます。
 //  ■SpotLight(そぼろP)
@@ -10,28 +10,9 @@
 //    ■SeriousShader(データP) 
 //    ■ExcellentShadow(そぼろP)
 //    ■MechanicMirror(ビームマンP)
-//    ┗■_dSkinSASCommon.fxsub(ドゥドゥ)
+//    ┗■_dSASCommon.fxsub(ドゥドゥ)
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////
-
-#ifndef H_MIN
-    #define H_MIN 0.80 // 色相の下限(0～1)
-#endif
-#ifndef H_MAX
-    #define H_MAX 0.20 // 色相の上限(0～1)
-#endif
-#ifndef S_MIN
-    #define S_MIN 0.03 // 彩度の下限(0～1)
-#endif
-#ifndef S_MAX
-    #define S_MAX 0.40 // 彩度の上限(0～1)
-#endif
-#ifndef V_MIN
-    #define V_MIN 0.70 // 明度の下限(0～1)
-#endif
-#ifndef V_MAX
-    #define V_MAX 2.00 // 明度の上限(0～1)
-#endif
 
 #ifdef INVERSE_X
     #define IMAGE_DIRECTION_X -1
@@ -275,45 +256,6 @@ sampler ObjSphareSampler = sampler_state {
     };
 #endif
 
-// 肌用 --------------------------------------------------------------------------------------------
-#ifdef USE_AUTO_DETECTION // 自動認識を使う時以外は読み込まない
-    #ifdef USE_NORMAL_MAP_SKIN
-        texture2D NormalMapSkin < string ResourceName = NORMAL_MAP_SKIN_PATH; MIP_SETTING >;
-        sampler NormalMapSkinSampler = sampler_state {
-            texture = <NormalMapSkin>;
-            TEX_FILTER
-            AddressU  = WRAP; AddressV = WRAP;
-        };
-    #endif
-
-    #ifdef USE_SPECULAR_MAP_SKIN
-        texture2D SpecularMapSkin < string ResourceName = SPECULAR_MAP_SKIN_PATH; MIP_SETTING >;
-        sampler SpecularMapSkinSampler = sampler_state {
-            texture = <SpecularMapSkin>;
-            TEX_FILTER
-            AddressU  = WRAP; AddressV = WRAP;
-        };
-    #endif
-
-    #ifdef USE_TEX_BLEND_SKIN
-        texture TexBlendSkin < string ResourceName = TEX_BLEND_SKIN_PATH; MIP_SETTING >;
-        sampler TexBlendSkinSampler = sampler_state {
-            texture = <TexBlendSkin>;
-            TEX_FILTER
-            AddressU  = WRAP; AddressV = WRAP;
-        };
-    #endif
-
-    #ifdef USE_SPHERE_2ND_SKIN
-        texture Sphere2ndSkin < string ResourceName = SPHERE_REP_SKIN_PATH; >;
-        sampler Sphere2ndSkinSampler = sampler_state {
-            texture = <Sphere2ndSkin>;
-            MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = LINEAR;
-            AddressU  = WRAP; AddressV = WRAP;
-        };
-    #endif
-#endif
-
 #ifdef USE_MIRROR
     #include "_MirrorParam.fxsub"
 #endif
@@ -483,55 +425,6 @@ float ShadowBrightness(float2 ShadowMapPos, float DepthRef){
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-// RGBからHSVに変換
-#ifdef USE_AUTO_DETECTION
-    float3 RGB2HSV(float3 rgb){
-        float maxColor = max( max(rgb.r, rgb.g), rgb.b);
-        float minColor = min( min(rgb.r, rgb.g), rgb.b);
-        float diff = maxColor - minColor;
-
-        float3 hsv;
-        // H
-        if ( maxColor == rgb.r ) {
-            hsv.x = ((rgb.g - rgb.b) / diff) / 6.0;
-        } else if ( maxColor == rgb.g ) {
-            hsv.x = ((rgb.b - rgb.r) / diff + 2.0) / 6.0;
-        } else {
-            hsv.x = ((rgb.r - rgb.g) / diff + 4.0) / 6.0;
-        }
-        if ( hsv.x < 0.0 ) {
-            hsv.x += 1.0;
-        }
-
-        // S
-        if ( maxColor == 0.0 ) {
-            hsv.y = 0.0;
-        } else {
-            hsv.y = ( diff / maxColor );
-        }
-
-        // V
-        hsv.z = maxColor;
-        return hsv;
-    }
-
-    bool IsSkin(float3 hsv){
-        bool ret = false;
-        float hMin = frac(H_MIN);
-        float hMax = frac(H_MAX);
-        float h = frac(hsv.x);
-        if (S_MIN <= hsv.y && hsv.y <= S_MAX) { // 肌のS(彩度)
-            if (V_MIN <= hsv.z && hsv.z <= V_MAX) { // 肌のV(明度)
-                if ( (hMax < hMin) && (h <= hMin) && (hMax - 1.0 <= h)
-                    || (hMin <= h) && (h <= hMax) ) { // 肌のH(色相)
-                    ret = true;
-                }
-            }
-        }
-        return ret;
-    }
-#endif
-///////////////////////////////////////////////////////////////////////////////////////////////
 // 引用: From ビームマンP
 #ifdef USE_NORMAL_MAP
     #define USE_CALC_NORMAL
@@ -638,34 +531,13 @@ BufferShadow_OUTPUT BufferShadow_VS(float4 Pos : POSITION, float3 Normal : NORMA
     float3 sc = 0; // スペキュラ色
     float3 msc = 0; // 材質スペキュラ色
     float4 Color = IN.Color;
-    float4 mRGB = float4(saturate(MaterialEmmisive + MaterialDiffuse.rgb), MaterialDiffuse.a);
     #ifdef USE_DARK
         float4 ShadowColor = float4(saturate(DarkAmbient), Color.a);  // 影の色
     #else
         float4 ShadowColor = float4(saturate(AmbientColor), Color.a);  // 影の色
     #endif
-    if ( use_texture ) {
-        // テクスチャ適用
-        float4 TexColor;
-        #ifdef USE_FULLMODE
-            if ( useFull ) { TexColor = tex2D( ObjTexSampler, FULL_BASE(IN.Tex) ); }
-            else { TexColor = tex2D( ObjTexSampler, IN.Tex ); }
-        #else
-            TexColor = tex2D( ObjTexSampler, IN.Tex );
-        #endif
-        // テクスチャ材質モーフ数
-        TexColor.rgb = lerp(1, TexColor * TextureMulValue + TextureAddValue, TextureMulValue.a + TextureAddValue.a);
-        mRGB *= TexColor;
-    }
 
-    #ifdef USE_AUTO_DETECTION
-        float3 mHSV = RGB2HSV(mRGB.rgb);
-        bool isSkin = IsSkin(mHSV);
-    #else
-        bool isSkin = false;
-    #endif
-    
-if ( !isSkin ) { // 通常時 ---------------------------------------------------------------------
+// --Normal--
     float2 bTex = IN.Tex * TexBlendRepeat;
     float2 nTex = IN.Tex * NormalMapRepeat;
     float2 texNormal = nTex;
@@ -946,109 +818,7 @@ if ( !isSkin ) { // 通常時 -----------------------------------------------------
         IN.ZCalcTex = mul( WP, LightWorldViewProjMatrix );
     #endif
 */
-} 
-#ifdef USE_AUTO_DETECTION
-else { // ここから肌用 -----------------------------------------------------------------------
-    float2 bTex = IN.Tex * TexBlendSkinRepeat;
-    float2 nTex = IN.Tex * NormalMapSkinRepeat;
-    float2 texNormal = nTex;
-    float2 texBase = IN.Tex;
-    float2 texBlend = bTex;
-
-    #ifdef USE_NORMAL_MAP_SKIN
-        float3x3 tf = compute_tangent_frame(IN.Normal, IN.Eye, nTex);
-        float3x3 tfa = {
-            {tf[0] * IMAGE_DIRECTION_X}, // Tangent
-            {tf[1] * IMAGE_DIRECTION_Y}, // Binormal
-            tf[2]}; // Normal
-
-        // 法線マップを使い法線とスフィア座標を計算し直す
-        IN.Normal = normalize(mul(tex2D( NormalMapSkinSampler, texNormal ) * 2 - 1, tfa));
-        float2 NormalWV = mul( IN.Normal, (float3x3)ViewMatrix );
-        IN.SpTex.x = NormalWV.x * 0.5f + 0.5f;
-        IN.SpTex.y = NormalWV.y * -0.5f + 0.5f;
-    #endif
-
-    {
-        float4 TexColor = float4(1,1,1,1);
-        if ( use_texture ) { // テクスチャ適用
-            #ifdef USE_FULLMODE
-                if (useFull) { TexColor = tex2D( ObjTexSampler, FULL_BASE(texBase) ); } // フルモード
-                else { TexColor = tex2D( ObjTexSampler, texBase ); }
-            #else
-                TexColor = tex2D( ObjTexSampler, texBase );
-            #endif
-            // テクスチャ材質モーフ
-            TexColor.rgb = lerp(1, TexColor * TextureMulValue + TextureAddValue, TextureMulValue.a + TextureAddValue.a);
-        }
-        #ifdef USE_TEX_BLEND_SKIN // 第2テクスチャ
-            float4 BlendTexColor = tex2D( TexBlendSkinSampler, texBlend );
-            TexColor.rgb = lerp( TexColor, BlendTexColor, saturate(TexBlendSkinRatio) );
-        #endif
-        Color *= TexColor;
-        ShadowColor *= TexColor;
-    }
-    
-    #ifndef IGNORE_SPHERE_1ST_SKIN // 元のスフィアを無視しない場合実行
-        if ( use_spheremap ) {
-            // スフィアマップ適用
-            float4 TexColor = tex2D(ObjSphareSampler,IN.SpTex);
-            // スフィアテクスチャ材質モーフ
-            TexColor.rgb = lerp(spadd?0:1, TexColor * SphereMulValue + SphereAddValue, SphereMulValue.a + SphereAddValue.a);
-            if(spadd) {
-                #ifdef USE_DARK
-                    Color.rgb += TexColor.rgb * LightAmbient;
-                    ShadowColor.rgb += TexColor.rgb * LightAmbient;
-                #else
-                    Color.rgb += TexColor.rgb;
-                    ShadowColor.rgb += TexColor.rgb;
-                #endif
-            } else {
-                Color *= TexColor;
-                ShadowColor *= TexColor;
-            }
-            Color.a *= TexColor.a;
-            ShadowColor.a *= TexColor.a;
-        }
-    #endif
-        
-    #ifdef USE_SPHERE_2ND_SKIN // 第2スフィア
-    {
-        Color *= float4(AmbientBoostSkin, 1.0);
-        ShadowColor *= float4(AmbientBoostSkin, 1.0);
-        float4 TexColor = tex2D(Sphere2ndSkinSampler, IN.SpTex);
-        #ifdef SPHERE_ADD
-            #ifdef USE_DARK
-                Color.rgb += TexColor.rgb * SphereBoost * LightAmbient;
-                ShadowColor.rgb += TexColor.rgb * SphereBoost * LightAmbient;
-            #else
-                Color.rgb += TexColor.rgb * SphereBoost;
-                ShadowColor.rgb += TexColor.rgb * SphereBoost;
-            #endif
-        #else
-            Color.rgb *= TexColor.rgb * SphereBoostSkin;
-            ShadowColor.rgb *= TexColor.rgb * SphereBoostSkin;
-        #endif
-        Color.a *= TexColor.a;
-        ShadowColor.a *= TexColor.a;
-    }
-    #endif
-    
-/*
-    #ifdef USE_HEIGHT_MAP
-        //Zテクスチャ作り直し
-        float4 WP = IN.WorldPos;
-        WP.xyz += IN.Normal * height * HeightScalePM;
-        IN.ZCalcTex = mul( WP, LightWorldViewProjMatrix );
-    #endif
-*/
-    #ifdef USE_SPECULAR_MAP_SKIN
-        sc = tex2D(SpecularMapSkinSampler, texNormal).r * LightSpecular;
-    #else
-        sc = SpecularColor;
-    #endif
-} // ここまで肌用 ------------------------------------------------------------------------------
-#endif
+// --Skin--
     
     float comp = 1.0;
     if(use_toon){
