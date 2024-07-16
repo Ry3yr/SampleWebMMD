@@ -160,6 +160,8 @@ document.getElementById('play').addEventListener('click', async () => {
         if (xhr.lengthComputable) {
             const percentComplete = (xhr.loaded / xhr.total) * 100;
             console.log('Audio load progress:', percentComplete.toFixed(2) + '%');
+ document.getElementById('readystate').textContent = 'Audio load progress: ' + percentComplete.toFixed(2) + '%';
+
 }}
 
 
