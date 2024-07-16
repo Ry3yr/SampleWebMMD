@@ -1,0 +1,364 @@
+
+
+<!--GeneratePmx2Links-->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const pmx2linksContainer = document.getElementById('pmx2links');
+    const links = document.querySelectorAll('a[href*="?pmx="]');
+    links.forEach(link => {
+        let originalHref = link.getAttribute('href');
+        let newHref = originalHref.replace('?pmx=', '?pmx2=');
+        const newLink = document.createElement('a');
+        newLink.textContent = link.textContent; // Copy the text content
+        newLink.setAttribute('href', newHref);  // Set the modified href
+        newLink.addEventListener('click', function(event) {
+            event.preventDefault(); // Prevent the default action (navigation)
+            let currentUrl = window.location.href;
+            let newUrl;
+            if (currentUrl.includes('?')) {
+                newUrl = currentUrl + '&' + newHref.split('?')[1]; // Append new query string
+            } else {
+                newUrl = currentUrl + '?' + newHref.split('?')[1]; // Append new query string
+            }
+            window.location.href = newUrl;
+        });
+        pmx2linksContainer.appendChild(newLink);
+    });
+});
+</script>
+
+<div id="readystate">...If vmd will cause keychar err, use https://www.mediafire.com/file/9olqch9pazq3fzd/AnimationSmoother.rar...</div>
+<button onclick="togglePhysicsAndReload()">Toggle Physics</button>
+<script>
+  function togglePhysicsAndReload() {
+    var physicsAreOn = localStorage.getItem("physicsareon");
+    if (physicsAreOn) {
+      localStorage.removeItem("physicsareon");
+    } else {
+      localStorage.setItem("physicsareon", "true");}
+    location.reload();}
+  var physicsAreOn = localStorage.getItem("physicsareon");
+  if (physicsAreOn) {
+    document.querySelector("button").textContent = "Physics On";
+  } else {
+    document.querySelector("button").textContent = "Physics Off";}
+</script>
+<!--<button onclick="clonePMX()">Clone PMX</button>-->
+
+<div class="keyboard">
+    <button id="." onclick="togglePhysicsAndReload()" style="background-color: transparent; border: none;color: transparent;">Move L3.__</button>
+    <button id="moveUpButton">Move Up</button><br>
+    <button id="moveLeftButton">Move Left</button>
+    <button id="moveDownButton">Move Down</button>
+    <button id="moveRightButton">Move Right</button>
+ <button id="." style="background-color: transparent; border: none;color: transparent;">.__</button>
+<button id="rotateleftButton">RotateLeft</button>
+<button id="rotaterightButton">RotateRight</button>
+<a target="_blank" href="https://www.youtube.com/playlist?list=PLBva3abEZvyT-_ajETBGeOCGBA_AFBT5Z#https://www.reddit.com/r/mikumikudance" style=color:blue>r/MMD</a> <a target="_blank" href="https://codepen.io/ryedai1/pens/tags/?selected_tag=mikumikudance" style=color:gray>(tools)</a>
+(<a target="_blank" href="https://ry3yr.github.io/SampleWebMMD-master.zip" style=color:blue>src-DLD</a>) <!--<a target="_blank" href="http://10.10.10.254/data/UsbDisk1/Volume1/SampleWebMMD-master/index.html?pmx=YusakuFujiki/yusaku.pmx&stage=/livestageclub/livestageclubanimated.pmx&vmd=bts-dna" style=color:blue>Offline-TripMate</a>(<a target="_blank" href="https://alceawis.de/qrgen.html?qr=http://10.10.10.254/data/UsbDisk1/Volume1/SampleWebMMD-master/index.html?pmx=YusakuFujiki/yusaku.pmx&stage=/livestageclub/livestageclubanimated.pmx&vmd=bts-dna" style=color:blue>qr</a>)-->
+</div>
+<details>
+<input type="text" id="buttonvmdInput" value="001" style="width: 100px;">
+<button type="button" onclick="copyToClipboard()">Copy</button>
+<button type="button" onclick="updateQueryStringParameter('vmd', document.getElementById('buttonvmdInput').value);checkfile();">cstm</button>
+<button type="button" onclick="localStorage.setItem('camid', document.getElementById('buttonvmdInput').value); PoseClickEvent(document.getElementById('buttonvmdInput').value);">cstm+cam</button>
+<input type="checkbox" id="checkboxSendToPHP">
+<label for="checkboxSendToPHP">Send to PHP</label>
+<!--CopytoClipboard---Code----->
+<script>
+  function copyToClipboard() {
+    var inputText = document.getElementById("buttonvmdInput").value;
+    var outputText = '{ id: "' + inputText + '", pose: "' + inputText + '", VmdClip: null, AudioClip: false },';
+
+    if (document.getElementById("checkboxSendToPHP").checked) {
+      // Send the output text to mainvmdwrite.php
+      var url = "mainvmdwrite.php";
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", url, true);
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+          alert("Text sent to mainvmdwrite.php!");
+        }};
+      xhr.send("outputText=" + encodeURIComponent(outputText));
+    } else {
+      navigator.clipboard.writeText(outputText)
+        .then(function() {
+          alert("Text copied to clipboard!");})
+        .catch(function(error) {
+          console.error("Error copying text: ", error);
+        });}}
+</script>
+</details>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.self !== window.top) {
+      var copyButton = document.querySelector('button[onclick="copyToClipboard()"]');
+      copyButton.disabled = true;
+      copyButton.addEventListener('mouseover', function() {
+        var tooltip = document.createElement('span');
+        tooltip.innerText = 'Disabled by CORS Policy';tooltip.style.position = 'absolute';tooltip.style.backgroundColor = '#000';tooltip.style.color = '#fff';tooltip.style.padding = '5px';
+        tooltip.style.borderRadius = '4px';tooltip.style.fontSize = '12px';tooltip.style.visibility = 'visible';tooltip.style.top = copyButton.offsetTop + copyButton.offsetHeight + 'px';
+        tooltip.style.left = copyButton.offsetLeft + 'px';document.body.appendChild(tooltip);});
+      copyButton.addEventListener('mouseout', function() {
+        var tooltip = document.querySelector('span');
+        tooltip.parentNode.removeChild(tooltip);});}});
+</script>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+</head>
+
+
+
+<div class="pose">
+    <!--<button type="button" value="001" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);">vm1</button>-->
+    <!--<button type="button" value="001" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);">vm1</button>-->
+    <button type="button" value="001" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">vm1</button>
+    <button type="button" value="002" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">vm2</button>
+    <button type="button" value="003" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">vm3(camoff)</button>
+    <button type="button" value="004walknthink" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">vm4</button>
+    <button type="button" value="005hard-carry" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">tst(audio)</button>
+    <button type="button" value="bts-bestofme" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">best(audio)</button>
+</div>
+<details><summary>All Motions</summary><div class="file-buttons" id="file-buttons"></div></details>
+<script>
+    function updateQueryStringParameter(key, value) {
+        var url = new URL(window.location.href);
+        var params = new URLSearchParams(url.search);
+        params.set(key, value);
+        url.search = params.toString();
+        history.replaceState(null, '', url.toString());}
+</script>
+
+<!--<button id="loadButton" value="./vmd/002.vmd">Load VMD File</button>-->
+<a href="?pmx=YusakuFujiki/yusaku.pmx">Yu</a>
+<a href="?pmx=AoiZaizen/AoiZaizen.pmx">Aoi</a> 
+<a href="?pmx=Xion/xion.pmx">Xion</a>
+<a href="?pmx=9s/9s.pmx">9s</a>
+<a href="?pmx=2b/na_2b_0418n.pmx">2B</a>
+<a href="?pmx=TLoZ_Zelda_(Scholar)/zelda_scholar.pmx">BOTW Zelda</a>
+<a href="?pmx=TLoZ_Zelda_(Skyward_Sword)/Zelda_(Skyward_Sword).pmx">SW Zelda</a>
+<a href="?pmx=TLoZ_Link_BOTW)/linkbotw.pmx">BOTW Link</a>
+<a href="?pmx=kh_roxas/kh_roxas.pmx">Roxas</a>
+<a href="?pmx=off/off.pmx">-[OFF]-</a>
+<button class="off-button" onclick="window.location.href='?pmx=YusakuFujiki/yusaku.pmx&pmx2=AoiZaizen/AoiZaizen.pmx';" style="background-color: #ffcccc; border: #ff9999; border-radius: 8px; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; transition-duration: 0.4s;">yusaao</button>
+<button class="off-button" onclick="window.location.href='?pmx=Xion%2Fxion.pmx&pmx2=Roxas%2Froxas.pmx';" style="background-color: #ffcccc; border: #ff9999; border-radius: 8px; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; transition-duration: 0.4s;">Xion&Rox</button>
+
+  </div>
+<details><summary>2ndChara</summary><div id="pmx2links"></div></details>
+<button id="play" onclick="" style="background-color: pink; background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.25) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0.25) 75%, transparent 75%, transparent); background-size: 20px 20px; border: none; color: white; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 5px; box-shadow: 0 0 10px rgba(255, 105, 180, 0.5); cursor: pointer; transition: transform 0.3s;" title="Spacebar">Play Animation and Audio</button>  <button id="fullscreenButton" title="F10">Fullscreen</button>
+
+
+
+<!----Check VMD File--Existance--->
+<!--<button id="checkFileButton" onclick="checkfile()">Check File</button>-->
+<script>
+        function getQueryStringParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);}
+        async function checkFileExistence(filePath) {
+            try {
+                const response = await fetch(filePath, { method: 'HEAD' });
+                if (response.ok) {
+                    console.log(`File exists: ${filePath}`);
+                    document.getElementById('readystate').textContent = `File exists: ${filePath}`;
+                    location.reload();
+                } else {
+                    console.log(`File does not exist (404): ${filePath}`);
+                    document.getElementById('readystate').textContent = `File doesn't exist: ${filePath}`;}
+            } catch (error) {
+                console.error(`Error fetching file: ${error}`);
+                document.getElementById('readystate').textContent = `Error fetching file: ${error}`;}}
+        function checkfile() {
+            const vmd = getQueryStringParameter('vmd');
+            if (vmd) {
+                const filePath = `./vmd/${vmd}.vmd`;
+                checkFileExistence(filePath);
+            } else {
+                console.log('No vmd parameter found in the query string.');
+                document.getElementById('readystate').textContent = 'No vmd parameter found in the query string.';}}
+const domContentLoadedHandler = () => {
+    checkfile();
+};
+</script>
+
+<!--AudioPlayback--ThreeJS-ver-->
+<script>
+async function playAnimationAndAudio() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const vmdValue = urlParams.get('vmd');
+    
+    if (!vmdValue) {
+        console.log('No vmd parameter found in the URL');
+        return false;
+    }
+    
+    console.log('vmdValue from URL:', vmdValue);
+    
+    const audioPath = `audio/${vmdValue}.mp3`;
+    const audioListener = new THREE.AudioListener();
+    const audio = new THREE.Audio(audioListener);
+    const audioLoader = new THREE.AudioLoader();
+    
+    // Load audio file
+    try {
+        const audioBuffer = await new Promise((resolve, reject) => {
+            audioLoader.load(audioPath, resolve, onAudioLoadProgress, reject);
+        });
+        audio.setBuffer(audioBuffer);
+        audio.setLoop(true); // Set to true if audio should loop
+        audio.setVolume(1.0); // Adjust volume as needed
+        audio.play();
+        console.log('Audio loaded and playing:', audioPath);
+    } catch (error) {
+        console.error('Error loading audio:', error);
+        return false;
+    }
+    
+    // Function to handle audio load progress (optional)
+    function onAudioLoadProgress(xhr) {
+        if (xhr.lengthComputable) {
+            const percentComplete = (xhr.loaded / xhr.total) * 100;
+            console.log('Audio load progress:', percentComplete.toFixed(2) + '%');
+        }
+    }
+    const clock = new THREE.Clock();
+    function update() {
+        const delta = clock.getDelta();
+    }
+    update();
+    return true;
+}
+
+</script>
+
+
+
+
+
+<!--AudioPlayback--non-ThreeJS-ver-->
+<!--
+<script>
+function playAnimationAndAudio() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var vmdValue = urlParams.get('vmd');
+    if (vmdValue) {
+        var audioPath = 'audio/' + vmdValue + '.mp3';
+        if (window.audioElement && !window.audioElement.paused) {
+            window.audioElement.currentTime = 0;
+        } else {
+           setTimeout(500);
+           window.audioElement = new Audio(audioPath);
+           audioElement.loop =  true;
+        }
+        window.audioElement.play();
+        console.log('Animation triggered');
+    } else {
+        console.log('No vmd parameter found in the URL');}}
+</script>
+-->
+
+
+  <div class="stage">
+<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/herogarden/herogarden.pmx';window.location.href = updatedUrl;})()">herogarden</a>
+<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/parkavenue/parkavenue.pmx';window.location.href = updatedUrl;})()">parkavenue</a>
+<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/livestageclub/livestageclubanimated.pmx';window.location.href = updatedUrl;})()">LiveStage</a>
+<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/h2cu09/h2cu09.pmx';window.location.href = updatedUrl;})()">h2cu09</a>
+<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/SciFi_Cube/SciFi_Cube.pmx';window.location.href = updatedUrl;})()">SciFi_Cube</a>
+<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/kh_twilighttown/kh_station_plaza/Station_Plaza.pmx';window.location.href = updatedUrl;})()">TwilightTownStation</a>
+<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/([?&])stage=[^&]*/g, '$1').replace(/(&|\?)$/, '');var newStageParam = encodeURIComponent('/kh_twtnw/Memory\'s_Skyscraper/Memory\'s_Skyscraper.pmx');updatedUrl += (updatedUrl.indexOf('?') > -1 ? '&' : '?') + 'stage=' + newStageParam;window.location.href = updatedUrl;})()">TWTNW Skyscraper</a>
+
+
+
+
+
+  </div>
+  <script src="./libs/three.js"></script>
+  <script src="./libs/mmdparser.min.js"></script>
+  <script src="./libs/ammo.min.js"></script>
+  <script src="./libs/TGALoader.js"></script>
+  <script src="./libs/MMDLoader.js"></script>
+  <script src="./libs/MMDAnimationHelper.js"></script>
+  <script src="./libs/mmd-loader.min.js"></script>
+  <script src="./libs/CCDIKSolver.js"></script>
+  <script src="./libs/MMDPhysics.js"></script>
+  <!--<script src="./libs/Vmd.js"></script>
+  <script src="./libs/VmdFileParser.js"></script>-->
+  <!--<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r106/build/three.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r106/examples/js/libs/mmdparser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ammo.js@0.0.10/ammo.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r106/examples/js/loaders/TGALoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r106/examples/js/loaders/MMDLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r106/examples/js/animation/MMDAnimationHelper.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r106/examples/js/animation/CCDIKSolver.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r106/examples/js/animation/MMDPhysics.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/jsm/controls/OrbitControls.js"></script>-->
+
+
+<script src="./js/main.js"></script>
+</body>
+</html>
+
+
+
+<!----Mark--used-button--green-->
+<script>
+window.addEventListener('load', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    var vmdValue = urlParams.get('vmd');
+    var buttons = document.querySelectorAll("button");
+    for (var i = 0; i < buttons.length; i++) {if (buttons[i].value === vmdValue) {buttons[i].style.backgroundColor = "lightgreen";}}
+});
+</script>
+
+
+<!--AllMotions-show---onlineCompOnly--->
+  <script>
+const fileDir = './vmd';
+function listFiles() {
+  const fileButtonsContainer = document.getElementById('file-buttons');
+  fetch(fileDir)
+    .then(response => response.text())
+    .then(data => {
+      const doc = new DOMParser().parseFromString(data, 'text/html');
+      const files = [...doc.getElementsByTagName('a')];
+      files
+        .map(file => file.textContent.trim())
+        .filter(fileName => fileName.endsWith('.vmd'))
+        .forEach(fileName => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.value = fileName;
+          button.textContent = fileName.replace('.vmd', '');
+          button.onclick = () => {
+            updateQueryStringParameter('vmd', fileName.replace('.vmd', ''));
+            location.reload();};
+          fileButtonsContainer.appendChild(button);});})
+    .catch(error => {
+      console.error('Error listing files:', error);
+    });}
+function updateQueryStringParameter(key, value) {
+  const url = new URL(window.location.href);
+  url.searchParams.set(key, value);
+  window.history.replaceState({}, '', url.toString());}
+window.addEventListener('load', listFiles);
+  </script>
+
+
+<!--keyboard-shortcuts--f10--spacebar-->
+   <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'F10') {
+                    event.preventDefault(); // Prevent default action (fullscreen mode)
+                    renderer.domElement.requestFullscreen()}});
+            document.addEventListener('keydown', function(event) {
+                if (event.key === ' ') { // Spacebar key
+                    event.preventDefault(); // Prevent default action (scrolling the page)
+                    document.getElementById('play').click();}});});
+</script>
