@@ -26,8 +26,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
+<div style="display: flex; flex-direction: row;">
 <div id="readystate">...If vmd will cause keychar err, use https://www.mediafire.com/file/9olqch9pazq3fzd/AnimationSmoother.rar...</div>
+<div id="vmdplay">...</div>
+<div id="xyzvalue">...</div>
+</div>
 <button onclick="togglePhysicsAndReload()">Toggle Physics</button>
 <script>
   function togglePhysicsAndReload() {
@@ -150,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   </div>
 <details><summary>2ndChara</summary><div id="pmx2links"></div></details>
-<button id="play" onclick="" style="background-color: pink; background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.25) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0.25) 75%, transparent 75%, transparent); background-size: 20px 20px; border: none; color: white; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 5px; box-shadow: 0 0 10px rgba(255, 105, 180, 0.5); cursor: pointer; transition: transform 0.3s;" title="Spacebar">Play Animation and Audio</button>  <button id="fullscreenButton" title="F10">Fullscreen</button>
+<button id="play" onclick="renderer.domElement.requestFullscreen()" style="background-color: pink; background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.25) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0.25) 75%, transparent 75%, transparent); background-size: 20px 20px; border: none; color: white; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 5px; box-shadow: 0 0 10px rgba(255, 105, 180, 0.5); cursor: pointer; transition: transform 0.3s;" title="Spacebar">Play Animation and Audio</button>  <button id="fullscreenButton" title="F10">Fullscreen</button>
 
 
 
@@ -271,12 +274,23 @@ function playAnimationAndAudio() {
 <a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/SciFi_Cube/SciFi_Cube.pmx';window.location.href = updatedUrl;})()">SciFi_Cube</a>
 <a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/kh_twilighttown/kh_station_plaza/Station_Plaza.pmx';window.location.href = updatedUrl;})()">TwilightTownStation</a>
 <a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/([?&])stage=[^&]*/g, '$1').replace(/(&|\?)$/, '');var newStageParam = encodeURIComponent('/kh_twtnw/Memory\'s_Skyscraper/Memory\'s_Skyscraper.pmx');updatedUrl += (updatedUrl.indexOf('?') > -1 ? '&' : '?') + 'stage=' + newStageParam;window.location.href = updatedUrl;})()">TWTNW Skyscraper</a>
-
-
-
-
-
+<a href target="_blank" ="#" onclick="redirectToTargetURL();"><b>[TestStageCoordinates]</b></a>
   </div>
+
+<!--redirect--coordinates--for--stage-->
+<script>
+function redirectToTargetURL() {
+  var currentURL = window.location.href;
+  var targetURL = "stageloader.html";
+  var queryParams = currentURL.split("?")[1];
+  var finalURL = targetURL + "?" + queryParams;
+  window.open(finalURL, "_blank");
+}
+</script>
+
+
+
+
   <script src="./libs/three.js"></script>
   <script src="./libs/mmdparser.min.js"></script>
   <script src="./libs/ammo.min.js"></script>
