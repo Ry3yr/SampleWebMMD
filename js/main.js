@@ -18,7 +18,7 @@ let Pmx2;
 
 //define new camposition globally
 let xyzglobal = [];
-let positionXYZ = localStorage.getItem('xyz');
+let positionXYZ = localStorage.getItem('xyz') || "0, 0, 0";
 if (positionXYZ) {xyzglobal = positionXYZ.split(',').map(parseFloat);}
 
 
@@ -51,6 +51,18 @@ if (pmx) {
     var ambientLight = new THREE.AmbientLight(0xffffff, 1.0); //hardcoded
     scene.add(ambientLight);
     scene.add(stageObject);
+
+//set stage pos.
+let positionXYZ = localStorage.getItem('xyz') || "0, 0, 0";
+let xyzArray = [];
+if (positionXYZ) {xyzArray = positionXYZ.split(',').map(parseFloat);}
+let x, y, z;
+if (xyzArray.length === 3 && xyzArray.every(coord => !isNaN(coord))) {[x, y, z] = xyzArray.map((coord, index) => coord + (index === 0 ? -0 : -0));}
+x = -x; //flip x because we move over 0coordinate
+y = 0;  //y must always be 0 so we do not fall under the stage
+z= -z; //flip x because we move over 0coordinate
+stageObject.position.set(x, y, z);
+
     const mixer = new THREE.AnimationMixer(stageObject);
     loader.loadAnimation(vmd1Path, stageObject, (vmd1Clip) => {
       vmd1Clip.name = "001";
@@ -127,18 +139,17 @@ displayDiv.innerHTML = "<b>&nbsp;XYZ</b>" + storedValue;
 //}
 let positionXYZ = localStorage.getItem('xyz');
 let xyzArray = [];
-if (positionXYZ) {
-  xyzArray = positionXYZ.split(',').map(parseFloat);
-}
+if (positionXYZ) {xyzArray = positionXYZ.split(',').map(parseFloat);}
 let x, y, z;
-if (xyzArray.length === 3 && xyzArray.every(coord => !isNaN(coord))) {
-  // Use xyzArray values plus (15, 15, 0) offset
-  [x, y, z] = xyzArray.map((coord, index) => coord + (index === 0 ? 15 : 15)); // Add 15 to x and y
+if (xyzArray.length === 3 && xyzArray.every(coord => !isNaN(coord))) {[x, y, z] = xyzArray.map((coord, index) => coord + (index === 0 ? 15 : 15)); // Add 15 to x and y
 } else {
-  x = 0;y = 19;z = 20;}
+x = 0;y = 19;z = 20;}
 camera.position.set(x, y, z);
   clock = new THREE.Clock();
 }
+
+
+
 function LoadStage() {
   return new Promise((resolve, reject) => {
     const loader = new THREE.MMDLoader();
@@ -186,28 +197,22 @@ document.getElementById('play').addEventListener('click', async () => {
     function onAudioLoadProgress(xhr) {
         if (xhr.lengthComputable) {
             const percentComplete = (xhr.loaded / xhr.total) * 100;
-            console.log('Audio load progress:', percentComplete.toFixed(2) + '%');
-}}
+            console.log('Audio load progress:', percentComplete.toFixed(2) + '%');}}
   try {
     startAnimation();
   } catch (error) {
-    console.error('Error loading models:', error);
-  }
-});
+    console.error('Error loading models:', error);}});
 async function LoadModels() {
   const loader = new THREE.MMDLoader();
   function LoadPMX(path) {
     return new Promise(resolve => {
       loader.load(path, (object) => {
         resolve(object);
-      }, onProgress, onError);
-    });
-  }
+      }, onProgress, onError);});}
   async function LoadVMDAnimation(mesh, id) {
   function getQueryStringParameter(name) {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(name);
-  }
+    return urlParams.get(name);}
   const vmdId = getQueryStringParameter('vmd') || 'bts-bestofme';
   const vmdPath = `./vmd/${vmdId}.vmd`;
   localStorage.setItem('vmd', vmdId);
@@ -219,9 +224,13 @@ async function LoadModels() {
       const vmdPlayDiv = document.getElementById('vmdplay');
       vmdPlayDiv.innerHTML = `<b>VMD Playtime:</b> ${vmdPlayTime} seconds`; // Output the duration to the "vmdplay" div
       resolve(vmdClip);
-    }, onProgress, reject);
-  });
-}
+    }, onProgress, reject);});}
+
+
+
+
+
+
 async function LoadCameraAnimation(camera) {
   let camid;
   if (new URLSearchParams(window.location.search).has('camera')) {
@@ -236,18 +245,22 @@ async function LoadCameraAnimation(camera) {
   }
   const cameraVmdPath = "./camera/" + camid + ".vmd";
   try {
-    const vmdClip = await new Promise((resolve, reject) => {
-      loader.loadAnimation(cameraVmdPath, camera, (vmdClip) => {
-        vmdClip.name = camid; // Set the name to the loaded camid
-        resolve(vmdClip);
-      }, onProgress, reject);
-    });
-    return vmdClip;
-  } catch (error) {
-    console.error('Error loading camera animation:', error);
-    throw error; // Re-throw the error to propagate it
-  }
-}
+      
+
+let positionXYZ = localStorage.getItem('xyz');
+let xyzArray = [];
+if (positionXYZ) {xyzArray = positionXYZ.split(',').map(parseFloat);}
+let x, y, z;
+if (xyzArray.length === 3 && xyzArray.every(coord => !isNaN(coord))) {[x, y, z] = xyzArray.map((coord, index) => coord + (index === 0 ? 15 : 15));}
+//camera.position.set(x, y, z);
+
+const vmdClip = await new Promise((resolve, reject) => {
+loader.loadAnimation(cameraVmdPath, camera, (vmdClip) => {
+vmdClip.name = camid;
+resolve(vmdClip);}, onProgress, reject);});
+return vmdClip;} catch (error) {console.error('Error loading camera animation:', error);
+throw error;
+}}
 
 
 
@@ -261,13 +274,10 @@ async function LoadModel1() {
     if (xyzArray.length === 3) {
       const [x, y, z] = xyzArray;
       //camera.position.set(x, y, z);
-      position.set(x, y, z);
-    } else {
-      console.error('Stored xyz coordinates in localStorage are not in the expected format.');
-    }
+      //position.set(x, y, z);
+    } else {console.error('Stored xyz coordinates in localStorage are not in the expected format.');}
   } else {
-    console.error('No xyz coordinates found in localStorage.');
-  }
+    console.error('No xyz coordinates found in localStorage.');}
   const mesh = await LoadPMX(Pmx);
   mesh.position.copy(position);
   scene.add(mesh);
@@ -284,8 +294,7 @@ async function LoadModel1() {
 async function LoadModel2() {
   try {
     if (!Pmx2) {
-      throw new Error('Pmx2 is not defined.');
-    }
+      throw new Error('Pmx2 is not defined.');}
     let positionXYZ = localStorage.getItem('xyz')|| "0, 0, 0";
     let position = new THREE.Vector3(0, 0, 0);
     if (positionXYZ) {
@@ -300,7 +309,7 @@ async function LoadModel2() {
       throw new Error('No xyz coordinates found in localStorage.');
     }
     const mesh2 = await LoadPMX(Pmx2);
-    mesh2.position.copy(position);
+    //mesh2.position.copy(position);
     mesh2.position.x += 15;
     scene.add(mesh2);
     const vmdClip = await LoadVMDAnimation(mesh2, "002");
