@@ -59,7 +59,7 @@ if (positionXYZ) {xyzArray = positionXYZ.split(',').map(parseFloat);}
 let x, y, z;
 if (xyzArray.length === 3 && xyzArray.every(coord => !isNaN(coord))) {[x, y, z] = xyzArray.map((coord, index) => coord + (index === 0 ? -0 : -0));}
 x = -x; //flip x because we move over 0coordinate
-y = 0;  //y must always be 0 so we do not fall under the stage
+//y = 0;  //y must always be 0 so we do not fall under the stage
 z= -z; //flip x because we move over 0coordinate
 stageObject.position.set(x, y, z);
 
@@ -204,27 +204,70 @@ document.getElementById('play').addEventListener('click', async () => {
     console.error('Error loading models:', error);}});
 async function LoadModels() {
   const loader = new THREE.MMDLoader();
+
   function LoadPMX(path) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       loader.load(path, (object) => {
         resolve(object);
-      }, onProgress, onError);});}
+      }, onProgress, reject); // Reject the promise if there's an error
+    });
+  }
   async function LoadVMDAnimation(mesh, id) {
-  function getQueryStringParameter(name) {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(name);}
-  const vmdId = getQueryStringParameter('vmd') || 'bts-bestofme';
-  const vmdPath = `./vmd/${vmdId}.vmd`;
-  localStorage.setItem('vmd', vmdId);
-  return new Promise((resolve, reject) => {
-    loader.loadAnimation(vmdPath, mesh, (vmdClip) => {
-      vmdClip.name = vmdId;
-      const vmdPlayTime = vmdClip.duration.toFixed(2); // Get the VMD animation duration
-      localStorage.setItem('vmdplay', vmdPlayTime); // Save the VMD play time to localStorage
-      const vmdPlayDiv = document.getElementById('vmdplay');
-      vmdPlayDiv.innerHTML = `<b>VMD Playtime:</b> ${vmdPlayTime} seconds`; // Output the duration to the "vmdplay" div
-      resolve(vmdClip);
-    }, onProgress, reject);});}
+    function getQueryStringParameter(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    const vmdId = getQueryStringParameter('vmd') || 'bts-bestofme';
+    const vmdPaths = [
+      `./vmd/${vmdId}.vmd`,
+      `./vmd/${vmdId}_lips.vmd`,
+      `./vmd/${vmdId}_facials.vmd`
+    ];
+    
+    localStorage.setItem('vmd', vmdId);
+
+    async function fileExists(url) {
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    }
+
+    const animations = [];
+    for (const path of vmdPaths) {
+      if (await fileExists(path)) {
+        const vmdClip = await new Promise((resolve, reject) => {
+          loader.loadAnimation(path, mesh, (clip) => {
+            clip.name = path;
+            resolve(clip);
+          }, onProgress, reject);
+        });
+        animations.push(vmdClip);
+        if (path.includes('_lips') || path.includes('_facials')) {
+          console.log(`Loaded additional VMD: ${path}`);
+        }
+      } else {
+        console.log(`File not found: ${path}`);
+      }
+    }
+
+    if (animations.length > 0) {
+      const mainAnimation = animations.find(clip => !clip.name.includes('_lips') && !clip.name.includes('_facials'));
+      if (mainAnimation) {
+        const vmdPlayTime = mainAnimation.duration.toFixed(2); // Get the VMD animation duration
+        localStorage.setItem('vmdplay', vmdPlayTime); // Save the VMD play time to localStorage
+        const vmdPlayDiv = document.getElementById('vmdplay');
+        vmdPlayDiv.innerHTML = `<b>VMD Playtime:</b> ${vmdPlayTime} seconds`; // Output the duration to the "vmdplay" div
+      }
+      return animations;
+    } else {
+      console.log('No VMD files loaded.');
+      return [];
+    }
+  }
 
 
 
