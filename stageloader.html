@@ -1,184 +1,211 @@
-<div id="readystate">...If vmd will cause keychar err, use https://www.mediafire.com/file/9olqch9pazq3fzd/AnimationSmoother.rar...</div>
-<div id="coordinates"> x y z</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Coordinates Editor</title>
+</head>
+<body>
+    <div id="readystate">...If vmd will cause keychar err, use https://www.mediafire.com/file/9olqch9pazq3fzd/AnimationSmoother.rar...</div>
+    <input id="coordinates" value="x y z">
 
-<div class="keyboard">
-    <button id="." onclick="togglePhysicsAndReload()" style="background-color: transparent; border: none;color: transparent;">Move L3.__</button>
-    <button id="moveUpButton">Move Up</button><br>
-    <button id="moveLeftButton">Move Left</button>
-    <button id="moveDownButton">Move Down</button>
-    <button id="moveRightButton">Move Right</button>
-    <button id="pullUpButton">PullUp</button><br>
-<button id="rotateleftButton">RotateLeft</button>
-<button id="rotaterightButton">RotateRight</button>
-<a target="_blank" href="https://www.youtube.com/playlist?list=PLBva3abEZvyT-_ajETBGeOCGBA_AFBT5Z#https://www.reddit.com/r/mikumikudance" style=color:blue>r/MMD</a> <a target="_blank" href="https://codepen.io/ryedai1/pens/tags/?selected_tag=mikumikudance" style=color:gray>(tools)</a>
-(<a target="_blank" href="https://ry3yr.github.io/SampleWebMMD-master.zip" style=color:blue>src-DLD</a>) <!--<a target="_blank" href="http://10.10.10.254/data/UsbDisk1/Volume1/SampleWebMMD-master/index.html?pmx=YusakuFujiki/yusaku.pmx&stage=/livestageclub/livestageclubanimated.pmx&vmd=bts-dna" style=color:blue>Offline-TripMate</a>(<a target="_blank" href="https://alceawis.de/qrgen.html?qr=http://10.10.10.254/data/UsbDisk1/Volume1/SampleWebMMD-master/index.html?pmx=YusakuFujiki/yusaku.pmx&stage=/livestageclub/livestageclubanimated.pmx&vmd=bts-dna" style=color:blue>qr</a>)-->
-</div>
-  <div id="controls">
-    <button id="birdseye-view">Birdseye View</button>
-    <button id="standard-view">Standard View</button>
-  </div>
-  <script src="./libs/three.min.js"></script>
-  <script src="./libs/three.js"></script>
-  <script src="./libs/MMDLoader.js"></script>
-  <script src="./libs/mmdparser.min.js"></script>
-  <script>
-let scene, renderer, camera, mesh, mesh2, pmx, pmx2, mixer, clipAction, update;
-let hasLoaded = false;
-let mixer1, mixer2, clock, cameraAnimation;
-const windowWidth = window.innerWidth;
-const windowHeight = window.innerHeight;
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
+    <div class="keyboard">
+        <button id="." onclick="togglePhysicsAndReload()" style="background-color: transparent; border: none; color: transparent;">Move L3.__</button>
+        <button id="moveUpButton">Move Up</button><br>
+        <button id="moveLeftButton">Move Left</button>
+        <button id="moveDownButton">Move Down</button>
+        <button id="moveRightButton">Move Right</button>
+        <button id="pullUpButton">PullUp</button><br>
+        <button id="rotateleftButton">RotateLeft</button>
+        <button id="rotaterightButton">RotateRight</button>
+        <a target="_blank" href="https://www.youtube.com/playlist?list=PLBva3abEZvyT-_ajETBGeOCGBA_AFBT5Z#https://www.reddit.com/r/mikumikudance" style="color:blue">r/MMD</a>
+        <a target="_blank" href="https://codepen.io/ryedai1/pens/tags/?selected_tag=mikumikudance" style="color:gray">(tools)</a>
+        (<a target="_blank" href="https://ry3yr.github.io/SampleWebMMD-master.zip" style="color:blue">src-DLD</a>)
+    </div>
 
-function getQueryStringValue(key) {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get(key);
-}
+    <div id="controls">
+        <button id="birdseye-view">Birdseye View</button>
+        <button id="standard-view">Standard View</button>
+    </div>
 
-const stage = getQueryStringValue('stage') || "/sorclair/sorclair.pmx";
-let StagePath = stage ? `./stages/${stage.trim()}` : './stages/sorclair/sorclair.pmx';
-if (StagePath) {
-  StagePath = `./stages${stage.trim()}`;
-} else {
-  StagePath = './stages/sorclair/sorclair.pmx';
-}
+    <script src="./libs/three.min.js"></script>
+    <script src="./libs/three.js"></script>
+    <script src="./libs/MMDLoader.js"></script>
+    <script src="./libs/mmdparser.min.js"></script>
+    <script>
+        let scene, renderer, camera, mixer, clock, raycaster, mouse;
+        const MotionObjects = [
+            { id: "001", pose: "001", VmdClip: null, AudioClip: false },
+            { id: "002", pose: "002", VmdClip: null, AudioClip: false },
+        ];
+        let clickedCoordinates = { x: 0, y: 0, z: 0 };
 
-console.log('StagePath:', StagePath);
+        function getQueryStringValue(key) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(key);
+        }
 
-if (StagePath) {
-  const loader = new THREE.MMDLoader();
-  const lastIndex = StagePath.lastIndexOf("/");
-  const basePath = StagePath.substring(0, lastIndex);
-  const vmd1Path = `${basePath}/001.vmd`;
-  const vmd2Path = `${basePath}/002.vmd`;
+        const stage = getQueryStringValue('stage') || "/sorclair/sorclair.pmx";
+        let StagePath = stage ? `./stages/${stage.trim()}` : './stages/sorclair/sorclair.pmx';
 
-  loader.load(StagePath, (stageObject) => {
-    var ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // hardcoded
-    scene.add(ambientLight);
-    scene.add(stageObject);
-    const mixer = new THREE.AnimationMixer(stageObject);
-    
-    loader.loadAnimation(vmd1Path, stageObject, (vmd1Clip) => {
-      vmd1Clip.name = "001";
-      console.log(`Loaded VMD: ${vmd1Path}`);
-      const motionObject1 = MotionObjects.find(obj => obj.id === "001");
-      if (motionObject1) {
-        motionObject1.VmdClip = vmd1Clip;
-        const action1 = mixer.clipAction(vmd1Clip);
-        action1.play();
-      } else {
-        console.warn(`Motion object with id "001" not found.`);
-      }
-    }, onProgress, onError);
+        console.log('StagePath:', StagePath);
 
-    loader.loadAnimation(vmd2Path, stageObject, (vmd2Clip) => {
-      vmd2Clip.name = "002";
-      console.log(`Loaded VMD: ${vmd2Path}`);
-      const motionObject2 = MotionObjects.find(obj => obj.id === "002");
-      if (motionObject2) {
-        motionObject2.VmdClip = vmd2Clip;
-        const action2 = mixer.clipAction(vmd2Clip);
-        action2.play();
-      } else {
-        console.warn(`Motion object with id "002" not found.`);
-      }
-    }, onProgress, onError);
+        function handleClick(x, y, z) {
+            clickedCoordinates = { x, y, z };
 
-    const clock = new THREE.Clock();
-    const animate = () => {
-      requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      mixer.update(delta);
-      renderer.render(scene, camera);
-    };
-    animate();
+            // Update coordinate input field
+            document.getElementById('coordinates').value = `X: ${x.toFixed(2)}, Y: ${y.toFixed(2)}, Z: ${z.toFixed(2)}`;
 
-    // Add click event listener to the renderer's DOM element
-    renderer.domElement.addEventListener('click', (event) => {
-      // Update mouse coordinates
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            // Update local storage
+            localStorage.setItem('xyz', `${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}`);
+        }
 
-      // Set up the raycaster
-      raycaster.setFromCamera(mouse, camera);
+        function updateCoordinate(axis, delta) {
+            const inputId = `${axis}-coordinate`;
+            const inputElement = document.getElementById(inputId);
+            let currentValue = parseFloat(inputElement.value);
+            if (isNaN(currentValue)) {
+                currentValue = 0;
+            }
+            currentValue += delta;
+            inputElement.value = currentValue.toFixed(2);
 
-      // Calculate objects intersecting the picking ray
-      const intersects = raycaster.intersectObjects(scene.children, true);
+            // Update coordinates display
+            const x = parseFloat(document.getElementById('x-coordinate').value);
+            const y = parseFloat(document.getElementById('y-coordinate').value);
+            const z = parseFloat(document.getElementById('z-coordinate').value);
+            document.getElementById('coordinates').value = `X: ${x.toFixed(2)}, Y: ${y.toFixed(2)}, Z: ${z.toFixed(2)}`;
 
-      if (intersects.length > 0) {
-        const intersection = intersects[0];
-        const { x, y, z } = intersection.point;
-        document.getElementById('coordinates').textContent = `Coordinates: X: ${x.toFixed(2)}, Y: ${y.toFixed(2)}, Z: ${z.toFixed(2)}`;
-        localStorage.setItem('xyz', `${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}`);
-      }
-    });
-  }, onProgress, onError);
-} else {
-  console.warn('No valid stage path found.');
-}
+            // Update local storage
+            localStorage.setItem('xyz', `${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}`);
+        }
 
-  document.getElementById("moveLeftButton").addEventListener("click", () => { camera.position.x -= 1; });
-  document.getElementById("moveRightButton").addEventListener("click", () => { camera.position.x += 1; });
-  document.getElementById("moveUpButton").addEventListener("click", () => { camera.position.z -= 5; });
-  document.getElementById("moveDownButton").addEventListener("click", () => { camera.position.z += 5; });
-  document.getElementById("pullUpButton").addEventListener("click", () => { camera.position.y += 5; });
+        function init() {
+            scene = new THREE.Scene();
+            renderer = new THREE.WebGLRenderer({ alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
 
-console.log('StagePath:', StagePath);
+            camera = new THREE.PerspectiveCamera(100, window.innerWidth / window.innerHeight, 1, 1000);
+            camera.position.set(0, 19, 20);
+            clock = new THREE.Clock();
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
 
-const MotionObjects = [
-  { id: "001", pose: "001", VmdClip: null, AudioClip: false },
-  { id: "002", pose: "002", VmdClip: null, AudioClip: false },
-];
+            const loader = new THREE.MMDLoader();
+            const lastIndex = StagePath.lastIndexOf("/");
+            const basePath = StagePath.substring(0, lastIndex);
+            const vmd1Path = `${basePath}/001.vmd`;
+            const vmd2Path = `${basePath}/002.vmd`;
 
-window.onload = () => {
-  Init();
-  LoadStage().then(() => {
-  });
-};
+            loader.load(StagePath, (stageObject) => {
+                var ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // hardcoded
+                scene.add(ambientLight);
+                scene.add(stageObject);
+                mixer = new THREE.AnimationMixer(stageObject);
 
-function Init() {
-  scene = new THREE.Scene();
-  renderer = new THREE.WebGLRenderer({ alpha: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
-  camera = new THREE.PerspectiveCamera(100, windowWidth / windowHeight, 1, 1000);
-  camera.position.set(0, 19, 20);
-  clock = new THREE.Clock();
-}
+                loader.loadAnimation(vmd1Path, stageObject, (vmd1Clip) => {
+                    vmd1Clip.name = "001";
+                    console.log(`Loaded VMD: ${vmd1Path}`);
+                    const motionObject1 = MotionObjects.find(obj => obj.id === "001");
+                    if (motionObject1) {
+                        motionObject1.VmdClip = vmd1Clip;
+                        const action1 = mixer.clipAction(vmd1Clip);
+                        action1.play();
+                    } else {
+                        console.warn(`Motion object with id "001" not found.`);
+                    }
+                }, onProgress, onError);
 
-document.getElementById('birdseye-view').addEventListener('click', () => {
-  camera.position.set(0, 100, 0);
-  camera.lookAt(0, 0, 0);
-});
+                loader.loadAnimation(vmd2Path, stageObject, (vmd2Clip) => {
+                    vmd2Clip.name = "002";
+                    console.log(`Loaded VMD: ${vmd2Path}`);
+                    const motionObject2 = MotionObjects.find(obj => obj.id === "002");
+                    if (motionObject2) {
+                        motionObject2.VmdClip = vmd2Clip;
+                        const action2 = mixer.clipAction(vmd2Clip);
+                        action2.play();
+                    } else {
+                        console.warn(`Motion object with id "002" not found.`);
+                    }
+                }, onProgress, onError);
 
-document.getElementById('standard-view').addEventListener('click', () => {
-  camera.position.set(0, 19, 20);
-  camera.lookAt(0, 19, 20);
-});
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    const delta = clock.getDelta();
+                    mixer.update(delta);
+                    renderer.render(scene, camera);
+                };
+                animate();
 
-function LoadStage() {
-  return new Promise((resolve, reject) => {
-    const loader = new THREE.MMDLoader();
-    loader.load(StagePath, (stageObject) => {
-      resolve();
-    }, onProgress, reject);
-  });
-}
+                // Add click event listener to the renderer's DOM element
+                renderer.domElement.addEventListener('click', (event) => {
+                    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                    raycaster.setFromCamera(mouse, camera);
 
-function onProgress(xhr) {
-  if (xhr.lengthComputable) {
-    const percentComplete = xhr.loaded / xhr.total * 100;
-    console.log(Math.round(percentComplete) + '% downloaded');
-    document.getElementById('readystate').innerHTML = Math.round(percentComplete) + '% downloaded (if stuck, click <a href="audio" target="_blank">here</a>) ' + 'Camera: ready -  ' + localStorage.getItem('camid');
-  }
-}
+                    const intersects = raycaster.intersectObjects(scene.children, true);
 
-function onError(xhr) {
-  console.error("Error loading resource:", xhr);
-  document.getElementById('readystate').textContent = "Error loading resource: " + xhr.statusText;
-}
+                    if (intersects.length > 0) {
+                        const intersection = intersects[0];
+                        const { x, y, z } = intersection.point;
+                        handleClick(x, y, z);
+                    }
+                });
+            }, onProgress, onError);
+        }
 
-  </script>
+        function onProgress(xhr) {
+            if (xhr.lengthComputable) {
+                const percentComplete = xhr.loaded / xhr.total * 100;
+                console.log(Math.round(percentComplete) + '% downloaded');
+                document.getElementById('readystate').innerHTML = Math.round(percentComplete) + '% downloaded (if stuck, click <a href="audio" target="_blank">here</a>) ' + 'Camera: ready -  ' + localStorage.getItem('camid');
+            }
+        }
+
+        function onError(xhr) {
+            console.error("Error loading resource:", xhr);
+            document.getElementById('readystate').textContent = "Error loading resource: " + xhr.statusText;
+        }
+
+        document.getElementById("moveLeftButton").addEventListener("click", () => { camera.position.x -= 1; });
+        document.getElementById("moveRightButton").addEventListener("click", () => { camera.position.x += 1; });
+        document.getElementById("moveUpButton").addEventListener("click", () => { camera.position.z -= 5; });
+        document.getElementById("moveDownButton").addEventListener("click", () => { camera.position.z += 5; });
+        document.getElementById("pullUpButton").addEventListener("click", () => { camera.position.y += 5; });
+
+        document.getElementById('birdseye-view').addEventListener('click', () => {
+            camera.position.set(0, 100, 0);
+            camera.lookAt(0, 0, 0);
+        });
+
+        document.getElementById('standard-view').addEventListener('click', () => {
+            camera.position.set(0, 19, 20);
+            camera.lookAt(0, 19, 20);
+        });
+
+        window.onload = () => {
+            init();
+        };
+
+        document.getElementById('coordinates').addEventListener('change', (event) => {
+            const coordinates = event.target.value.replace('X: ', '').replace('Y: ', '').replace('Z: ', '').split(',').map(val => parseFloat(val.trim()));
+            const [x, y, z] = coordinates;
+            if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                clickedCoordinates = { x, y, z };
+                localStorage.setItem('xyz', `${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}`);
+            }
+        });
+
+        document.getElementById('moveLeftButton').addEventListener('click', () => updateCoordinate('x', -0.1));
+        document.getElementById('moveRightButton').addEventListener('click', () => updateCoordinate('x', 0.1));
+        document.getElementById('moveUpButton').addEventListener('click', () => updateCoordinate('y', 0.1));
+        document.getElementById('moveDownButton').addEventListener('click', () => updateCoordinate('y', -0.1));
+        document.getElementById('pullUpButton').addEventListener('click', () => updateCoordinate('z', 0.1));
+        document.getElementById('rotateleftButton').addEventListener('click', () => updateCoordinate('z', -0.1));
+        document.getElementById('rotaterightButton').addEventListener('click', () => updateCoordinate('z', 0.1));
+
+    </script>
 </body>
 </html>
