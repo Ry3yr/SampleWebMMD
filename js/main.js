@@ -51,7 +51,6 @@ if (pmx) {
     var ambientLight = new THREE.AmbientLight(0xffffff, 1.0); //hardcoded
     scene.add(ambientLight);
     scene.add(stageObject);
-
 //set stage pos.
 let positionXYZ = localStorage.getItem('xyz') || "0, 0, 0";
 let xyzArray = [];
@@ -62,7 +61,6 @@ x = -x; //flip x because we move over 0coordinate
 //y = 0;  //y must always be 0 so we do not fall under the stage
 z= -z; //flip x because we move over 0coordinate
 stageObject.position.set(x, y, z);
-
     const mixer = new THREE.AnimationMixer(stageObject);
     loader.loadAnimation(vmd1Path, stageObject, (vmd1Clip) => {
       vmd1Clip.name = "001";
@@ -205,6 +203,7 @@ document.getElementById('play').addEventListener('click', async () => {
 async function LoadModels() {
   const loader = new THREE.MMDLoader();
 
+
   function LoadPMX(path) {
     return new Promise((resolve, reject) => {
       loader.load(path, (object) => {
@@ -212,65 +211,142 @@ async function LoadModels() {
       }, onProgress, reject); // Reject the promise if there's an error
     });
   }
-  async function LoadVMDAnimation(mesh, id) {
-    function getQueryStringParameter(name) {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get(name);
-    }
 
-    const vmdId = getQueryStringParameter('vmd') || 'bts-bestofme';
-    const vmdPaths = [
-      `./vmd/${vmdId}.vmd`,
-      `./vmd/${vmdId}_lips.vmd`,
-      `./vmd/${vmdId}_facials.vmd`
-    ];
-    
-    localStorage.setItem('vmd', vmdId);
 
-    async function fileExists(url) {
-      try {
-        const response = await fetch(url, { method: 'HEAD' });
-        return response.ok;
-      } catch {
-        return false;
-      }
-    }
 
-    const animations = [];
-    for (const path of vmdPaths) {
-      if (await fileExists(path)) {
-        const vmdClip = await new Promise((resolve, reject) => {
-          loader.loadAnimation(path, mesh, (clip) => {
-            clip.name = path;
-            resolve(clip);
-          }, onProgress, reject);
-        });
-        animations.push(vmdClip);
-        if (path.includes('_lips') || path.includes('_facials')) {
-          console.log(`Loaded additional VMD: ${path}`);
-        }
-      } else {
-        console.log(`File not found: ${path}`);
-      }
-    }
 
-    if (animations.length > 0) {
-      const mainAnimation = animations.find(clip => !clip.name.includes('_lips') && !clip.name.includes('_facials'));
-      if (mainAnimation) {
-        const vmdPlayTime = mainAnimation.duration.toFixed(2); // Get the VMD animation duration
-        localStorage.setItem('vmdplay', vmdPlayTime); // Save the VMD play time to localStorage
-        const vmdPlayDiv = document.getElementById('vmdplay');
-        vmdPlayDiv.innerHTML = `<b>VMD Playtime:</b> ${vmdPlayTime} seconds`; // Output the duration to the "vmdplay" div
-      }
-      return animations;
-    } else {
-      console.log('No VMD files loaded.');
-      return [];
+
+
+async function LoadVMDAnimation(mesh, isMesh2 = false) {
+  function getQueryStringParameter(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+  }
+
+  // Determine VMD IDs based on query parameters
+  const vmdId = getQueryStringParameter('vmd') || 'bts-bestofme';
+  const vmdId2 = getQueryStringParameter('vmd2') || vmdId;
+
+  // Determine which VMD paths to use based on the isMesh2 flag
+  const vmdPaths = isMesh2 ? [
+    `./vmd/${vmdId2}.vmd`,
+    `./vmd/${vmdId2}_lips.vmd`,
+    `./vmd/${vmdId2}_facials.vmd`
+  ] : [
+    `./vmd/${vmdId}.vmd`,
+    `./vmd/${vmdId}_lips.vmd`,
+    `./vmd/${vmdId}_facials.vmd`
+  ];
+
+  localStorage.setItem('vmd', isMesh2 ? vmdId2 : vmdId);
+
+  async function fileExists(url) {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      return response.ok;
+    } catch {
+      return false;
     }
   }
 
+  const animations = [];
+  for (const path of vmdPaths) {
+    if (await fileExists(path)) {
+      const vmdClip = await new Promise((resolve, reject) => {
+        loader.loadAnimation(path, mesh, (clip) => {
+          clip.name = path;
+          resolve(clip);
+        }, onProgress, reject);
+      });
+      animations.push(vmdClip);
+      if (path.includes('_lips') || path.includes('_facials')) {
+        console.log(`Loaded additional VMD: ${path}`);
+      }
+    } else {
+      console.log(`File not found: ${path}`);
+    }
+  }
+
+  if (animations.length > 0) {
+    const mainAnimation = animations.find(clip => !clip.name.includes('_lips') && !clip.name.includes('_facials'));
+    if (mainAnimation) {
+      const vmdPlayTime = mainAnimation.duration.toFixed(2); // Get the VMD animation duration
+      localStorage.setItem('vmdplay', vmdPlayTime); // Save the VMD play time to localStorage
+      const vmdPlayDiv = document.getElementById('vmdplay');
+      vmdPlayDiv.innerHTML = `<b>VMD Playtime:</b> ${vmdPlayTime} seconds`; // Output the duration to the "vmdplay" div
+    }
+    return animations;
+  } else {
+    console.log('No VMD files loaded.');
+    document.getElementById('readystate').textContent = `MotionError ${path}`;
+    return [];
+  }
+}
 
 
+async function LoadModel1() {
+  let positionXYZ = localStorage.getItem('xyz') || "0, 0, 0";
+  let position = new THREE.Vector3(0, 0, 0);
+  if (positionXYZ) {
+    const xyzArray = positionXYZ.split(',').map(parseFloat);
+    if (xyzArray.length === 3) {
+      const [x, y, z] = xyzArray;
+      //camera.position.set(x, y, z);
+      //position.set(x, y, z);
+    } else {
+      console.error('Stored xyz coordinates in localStorage are not in the expected format.');
+    }
+  } else {
+    console.error('No xyz coordinates found in localStorage.');
+  }
+  const mesh = await LoadPMX(Pmx);
+  mesh.position.copy(position);
+  scene.add(mesh);
+  const vmdClip = await LoadVMDAnimation(mesh, false); // Pass false for mesh
+  const helper = new THREE.MMDAnimationHelper({ afterglow: 1.0 });
+  const mmd = { mesh: mesh, animation: vmdClip };
+  helper.add(mmd.mesh, {
+    animation: mmd.animation,
+    physics: true
+  });
+  return { mesh: mesh, helper: helper };
+}
+
+async function LoadModel2() {
+  try {
+    if (!Pmx2) {
+      throw new Error('Pmx2 is not defined.');
+    }
+    let positionXYZ = localStorage.getItem('xyz') || "0, 0, 0";
+    let position = new THREE.Vector3(0, 0, 0);
+    if (positionXYZ) {
+      const xyzArray = positionXYZ.split(',').map(parseFloat);
+      if (xyzArray.length === 3) {
+        const [x, y, z] = xyzArray;
+        position.set(x, y, z);
+      } else {
+        throw new Error('Stored xyz coordinates in localStorage are not in the expected format.');
+      }
+    } else {
+      throw new Error('No xyz coordinates found in localStorage.');
+    }
+    const mesh2 = await LoadPMX(Pmx2);
+    //mesh2.position.copy(position);
+    //mesh2.position.x += 15;
+    !new URLSearchParams(window.location.search).has('vmd2') && (mesh2.position.x += 15);
+    scene.add(mesh2);
+    const vmdClip = await LoadVMDAnimation(mesh2, true); // Pass true for mesh2
+    const helper = new THREE.MMDAnimationHelper({ afterglow: 1.0 });
+    helper.add(mesh2, {
+      animation: vmdClip,
+      physics: true
+    });
+    return { mesh: mesh2, helper };
+  } catch (error) {
+    console.error('Error loading model 2:', error);
+    return null;
+  }
+}
 
 
 
@@ -288,15 +364,12 @@ async function LoadCameraAnimation(camera) {
   }
   const cameraVmdPath = "./camera/" + camid + ".vmd";
   try {
-      
-
 let positionXYZ = localStorage.getItem('xyz');
 let xyzArray = [];
 if (positionXYZ) {xyzArray = positionXYZ.split(',').map(parseFloat);}
 let x, y, z;
 if (xyzArray.length === 3 && xyzArray.every(coord => !isNaN(coord))) {[x, y, z] = xyzArray.map((coord, index) => coord + (index === 0 ? 15 : 15));}
 //camera.position.set(x, y, z);
-
 const vmdClip = await new Promise((resolve, reject) => {
 loader.loadAnimation(cameraVmdPath, camera, (vmdClip) => {
 vmdClip.name = camid;
@@ -308,65 +381,6 @@ throw error;
 
 
 
-
-async function LoadModel1() {
-  let positionXYZ = localStorage.getItem('xyz')|| "0, 0, 0";
-  let position = new THREE.Vector3(0, 0, 0);
-  if (positionXYZ) {
-    const xyzArray = positionXYZ.split(',').map(parseFloat);
-    if (xyzArray.length === 3) {
-      const [x, y, z] = xyzArray;
-      //camera.position.set(x, y, z);
-      //position.set(x, y, z);
-    } else {console.error('Stored xyz coordinates in localStorage are not in the expected format.');}
-  } else {
-    console.error('No xyz coordinates found in localStorage.');}
-  const mesh = await LoadPMX(Pmx);
-  mesh.position.copy(position);
-  scene.add(mesh);
-  const vmdClip = await LoadVMDAnimation(mesh, "001");
-  const helper = new THREE.MMDAnimationHelper({ afterglow: 1.0 });
-  const mmd = { mesh: mesh, animation: vmdClip };
-  helper.add(mmd.mesh, {
-    animation: mmd.animation,
-    physics: true
-  });
-  return { mesh: mesh, helper: helper };
-}
-
-async function LoadModel2() {
-  try {
-    if (!Pmx2) {
-      throw new Error('Pmx2 is not defined.');}
-    let positionXYZ = localStorage.getItem('xyz')|| "0, 0, 0";
-    let position = new THREE.Vector3(0, 0, 0);
-    if (positionXYZ) {
-      const xyzArray = positionXYZ.split(',').map(parseFloat);
-      if (xyzArray.length === 3) {
-        const [x, y, z] = xyzArray;
-        position.set(x, y, z);
-      } else {
-        throw new Error('Stored xyz coordinates in localStorage are not in the expected format.');
-      }
-    } else {
-      throw new Error('No xyz coordinates found in localStorage.');
-    }
-    const mesh2 = await LoadPMX(Pmx2);
-    //mesh2.position.copy(position);
-    mesh2.position.x += 15;
-    scene.add(mesh2);
-    const vmdClip = await LoadVMDAnimation(mesh2, "002");
-    const helper = new THREE.MMDAnimationHelper({ afterglow: 1.0 });
-    helper.add(mesh2, {
-      animation: vmdClip,
-      physics: true
-    });
-    return { mesh: mesh2, helper };
-  } catch (error) {
-    console.error('Error loading model 2:', error);
-    return null;
-  }
-}
   const { mesh: mesh1, helper: helper1 } = await LoadModel1();
   const { mesh: mesh2, helper: helper2 } = await LoadModel2();
 const fov = 45; // Define the field of view
