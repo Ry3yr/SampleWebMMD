@@ -185,13 +185,10 @@ document.getElementById('play').addEventListener('click', async () => {
         audio.setLoop(true); // Set to true if audio should loop
         audio.setVolume(1.0); // Adjust volume as needed
         audio.play();
-        console.log('Audio loaded and playing:', audioPath);
-    } catch (error) {
+        console.log('Audio loaded and playing:', audioPath);} catch (error) {
         console.error('Error loading audio:', error);
         document.getElementById('readystate').textContent = "Error loading Audio";
-
-        return false;
-    }
+        return false;}
     function onAudioLoadProgress(xhr) {
         if (xhr.lengthComputable) {
             const percentComplete = (xhr.loaded / xhr.total) * 100;
@@ -208,9 +205,7 @@ async function LoadModels() {
     return new Promise((resolve, reject) => {
       loader.load(path, (object) => {
         resolve(object);
-      }, onProgress, reject); // Reject the promise if there's an error
-    });
-  }
+      }, onProgress, reject); });}
 
 
 
@@ -220,14 +215,9 @@ async function LoadModels() {
 async function LoadVMDAnimation(mesh, isMesh2 = false) {
   function getQueryStringParameter(name) {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(name);
-  }
-
-  // Determine VMD IDs based on query parameters
+    return urlParams.get(name);}
   const vmdId = getQueryStringParameter('vmd') || 'bts-bestofme';
   const vmdId2 = getQueryStringParameter('vmd2') || vmdId;
-
-  // Determine which VMD paths to use based on the isMesh2 flag
   const vmdPaths = isMesh2 ? [
     `./vmd/${vmdId2}.vmd`,
     `./vmd/${vmdId2}_lips.vmd`,
@@ -237,51 +227,55 @@ async function LoadVMDAnimation(mesh, isMesh2 = false) {
     `./vmd/${vmdId}_lips.vmd`,
     `./vmd/${vmdId}_facials.vmd`
   ];
-
   localStorage.setItem('vmd', isMesh2 ? vmdId2 : vmdId);
-
-  async function fileExists(url) {
-    try {
-      const response = await fetch(url, { method: 'HEAD' });
-      return response.ok;
-    } catch {
-      return false;
-    }
-  }
-
+async function fileExists(url) {
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === 4) {
+        resolve(xhr.status === 200);
+      }
+    };
+    xhr.onerror = () => resolve(false);
+    xhr.send();
+  });
+}
+  // Check if 'extraz' is set to 'yes' and adjust paths accordingly
+  const checkExtraz = localStorage.getItem('extraz') === 'yes';
+  const pathsToCheck = [vmdPaths[0]]; // Always check the base VMD file
+  if (checkExtraz) {
+    pathsToCheck.push(vmdPaths[1], vmdPaths[2]);}
   const animations = [];
-  for (const path of vmdPaths) {
+  for (const path of pathsToCheck) {
     if (await fileExists(path)) {
       const vmdClip = await new Promise((resolve, reject) => {
         loader.loadAnimation(path, mesh, (clip) => {
           clip.name = path;
           resolve(clip);
-        }, onProgress, reject);
-      });
+        }, onProgress, reject);});
       animations.push(vmdClip);
       if (path.includes('_lips') || path.includes('_facials')) {
-        console.log(`Loaded additional VMD: ${path}`);
-      }
+        console.log(`Loaded additional VMD: ${path}`);}
     } else {
-      console.log(`File not found: ${path}`);
-    }
-  }
-
+      console.log(`File not found: ${path}`);}}
   if (animations.length > 0) {
     const mainAnimation = animations.find(clip => !clip.name.includes('_lips') && !clip.name.includes('_facials'));
     if (mainAnimation) {
       const vmdPlayTime = mainAnimation.duration.toFixed(2); // Get the VMD animation duration
       localStorage.setItem('vmdplay', vmdPlayTime); // Save the VMD play time to localStorage
       const vmdPlayDiv = document.getElementById('vmdplay');
-      vmdPlayDiv.innerHTML = `<b>VMD Playtime:</b> ${vmdPlayTime} seconds`; // Output the duration to the "vmdplay" div
-    }
+      if (vmdPlayDiv) {
+        vmdPlayDiv.innerHTML = `<b>VMD Playtime:</b> ${vmdPlayTime} seconds`;}}
     return animations;
-  } else {
-    console.log('No VMD files loaded.');
-    document.getElementById('readystate').textContent = `MotionError ${path}`;
-    return [];
-  }
-}
+  } else {console.log('No VMD files loaded.');
+    const readystateDiv = document.getElementById('readystate');
+    if (readystateDiv) {
+      readystateDiv.textContent = 'MotionError: No valid VMD files found.';}
+    return [];}}
+
+
+
 
 
 async function LoadModel1() {
@@ -293,12 +287,8 @@ async function LoadModel1() {
       const [x, y, z] = xyzArray;
       //camera.position.set(x, y, z);
       //position.set(x, y, z);
-    } else {
-      console.error('Stored xyz coordinates in localStorage are not in the expected format.');
-    }
-  } else {
-    console.error('No xyz coordinates found in localStorage.');
-  }
+    } else {console.error('Stored xyz coordinates in localStorage are not in the expected format.');}
+    } else {console.error('No xyz coordinates found in localStorage.');}
   const mesh = await LoadPMX(Pmx);
   mesh.position.copy(position);
   scene.add(mesh);
@@ -309,14 +299,10 @@ async function LoadModel1() {
     animation: mmd.animation,
     physics: true
   });
-  return { mesh: mesh, helper: helper };
-}
-
+  return { mesh: mesh, helper: helper };}
 async function LoadModel2() {
-  try {
-    if (!Pmx2) {
-      throw new Error('Pmx2 is not defined.');
-    }
+  try {if (!Pmx2) {
+    throw new Error('Pmx2 is not defined.');}
     let positionXYZ = localStorage.getItem('xyz') || "0, 0, 0";
     let position = new THREE.Vector3(0, 0, 0);
     if (positionXYZ) {
@@ -324,16 +310,13 @@ async function LoadModel2() {
       if (xyzArray.length === 3) {
         const [x, y, z] = xyzArray;
         position.set(x, y, z);
-      } else {
-        throw new Error('Stored xyz coordinates in localStorage are not in the expected format.');
-      }
-    } else {
-      throw new Error('No xyz coordinates found in localStorage.');
-    }
+      } else {throw new Error('Stored xyz coordinates in localStorage are not in the expected format.');}
+      } else {throw new Error('No xyz coordinates found in localStorage.');}
     const mesh2 = await LoadPMX(Pmx2);
     //mesh2.position.copy(position);
     //mesh2.position.x += 15;
-    !new URLSearchParams(window.location.search).has('vmd2') && (mesh2.position.x += 15);
+    //!new URLSearchParams(window.location.search).has('vmd2') && (mesh2.position.x += 15);
+    mesh2.position.x = parseInt(new URLSearchParams(window.location.search).get('distance')) || (new URLSearchParams(window.location.search).has('vmd2') ? 0 : 15);
     scene.add(mesh2);
     const vmdClip = await LoadVMDAnimation(mesh2, true); // Pass true for mesh2
     const helper = new THREE.MMDAnimationHelper({ afterglow: 1.0 });
@@ -344,9 +327,9 @@ async function LoadModel2() {
     return { mesh: mesh2, helper };
   } catch (error) {
     console.error('Error loading model 2:', error);
-    return null;
-  }
-}
+    return null;}}
+
+
 
 
 
@@ -359,9 +342,7 @@ async function LoadCameraAnimation(camera) {
   } else {
     camid = localStorage.getItem('camid');
     if (!camid) {
-      camid = 'bts-bestofme';
-    }
-  }
+      camid = 'bts-bestofme';}}
   const cameraVmdPath = "./camera/" + camid + ".vmd";
   try {
 let positionXYZ = localStorage.getItem('xyz');
@@ -375,12 +356,7 @@ loader.loadAnimation(cameraVmdPath, camera, (vmdClip) => {
 vmdClip.name = camid;
 resolve(vmdClip);}, onProgress, reject);});
 return vmdClip;} catch (error) {console.error('Error loading camera animation:', error);
-throw error;
-}}
-
-
-
-
+throw error;}}
   const { mesh: mesh1, helper: helper1 } = await LoadModel1();
   const { mesh: mesh2, helper: helper2 } = await LoadModel2();
 const fov = 45; // Define the field of view
@@ -400,21 +376,17 @@ const far = 1000; // Define the far clipping plane
     helper1.update(delta);
     if (helper2) helper2.update(delta);
     cameraHelper.update(delta); // Update camera animation
-    renderer.render(scene, camera);
-  };
-}
+    renderer.render(scene, camera);};}
 function onProgress(xhr) {
   if (xhr.lengthComputable) {
     const percentComplete = xhr.loaded / xhr.total * 100;
     console.log(Math.round(percentComplete) + '% downloaded');
-document.getElementById('readystate').innerHTML = Math.round(percentComplete) + '% downloaded (if stuck, click <a href="audio" target="_blank">here</a>) ' + 'Camera: ready -  ' + localStorage.getItem('camid');
-  }
-}
+document.getElementById('readystate').innerHTML = Math.round(percentComplete) + '% downloaded (if stuck, click <a href="audio" target="_blank">here</a>) ' + 'Camera: ready -  ' + localStorage.getItem('camid');}}
 function onError(xhr) {
   console.error("Error loading resource:", xhr);
-document.getElementById('readystate').textContent = "Error loading resource: " + xhr.statusText;
+document.getElementById('readystate').textContent = "Error loading resource: " + xhr.statusText;}
 
-}
+
     fullscreenButton.addEventListener('click', () => {
       if (!document.fullscreenElement) {
         //document.body.requestFullscreen();
