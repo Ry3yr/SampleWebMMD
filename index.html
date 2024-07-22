@@ -150,10 +150,37 @@ document.addEventListener('DOMContentLoaded', function() {
 <a href="?pmx=off/off.pmx">-[OFF]-</a>
 <button class="off-button" onclick="window.location.href='?pmx=YusakuFujiki/yusaku.pmx&pmx2=AoiZaizen/AoiZaizen.pmx';" style="background-color: #ffcccc; border: #ff9999; border-radius: 8px; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; transition-duration: 0.4s;">yusaao</button>
 <button class="off-button" onclick="window.location.href='?pmx=Xion%2Fxion.pmx&pmx2=Roxas%2Froxas.pmx';" style="background-color: #ffcccc; border: #ff9999; border-radius: 8px; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; transition-duration: 0.4s;">Xion&Rox</button>
-
+<button onclick="window.location.href='?pmx=YusakuFujiki%2Fyusaku.pmx&pmx2=AoiZaizen%2FAoiZaizen.pmx&stage=%2Flivestageclub%2Flivestageclubanimated.pmx&vmd=30sechug&vmd2=30sechug_2';">yusao-hug</button>
   </div>
 <details><summary>2ndChara</summary><div id="pmx2links"></div></details>
-<button id="play" onclick="renderer.domElement.requestFullscreen()" style="background-color: pink; background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.25) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0.25) 75%, transparent 75%, transparent); background-size: 20px 20px; border: none; color: white; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 5px; box-shadow: 0 0 10px rgba(255, 105, 180, 0.5); cursor: pointer; transition: transform 0.3s;" title="Spacebar">Play Animation and Audio</button>  <button id="fullscreenButton" title="F10">Fullscreen</button>
+
+<div style="display: flex; flex-direction: row;">
+<button id="play" onclick="renderer.domElement.requestFullscreen()" style="background-color: pink; background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.25) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0.25) 75%, transparent 75%, transparent); background-size: 20px 20px; border: none; color: white; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 5px; box-shadow: 0 0 10px rgba(255, 105, 180, 0.5); cursor: pointer; transition: transform 0.3s;" title="Spacebar">Play Animation and Audio</button>      <button id="fullscreenButton" title="F10" style="opacity: 0.2; transition: opacity 0.3s; background-color: #007BFF; border: none; padding: 10px 20px; border-radius: 5px;">Fullscreen</button>
+<label class="switch"><input type="checkbox" id="toggleSwitch" title="extras yes/no"><span class="slider"></span></label>Face/Lips/Extras: <span id="statusValue">Unknown</span>
+</div>
+
+
+<!---Toggle-extraz--localstorage-value-between-yes-and-no-->
+    <style>
+.switch{position:relative;display:inline-block;width:60px;height:34px}.slider,.slider:before{position:absolute;transition:.4s}.switch input{opacity:0;width:0;height:0}.slider{cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;border-radius:34px}.slider:before{content:"";height:26px;width:26px;border-radius:50%;left:4px;bottom:4px;background-color:#fff}input:checked+.slider{background-color:#2196f3}input:checked+.slider:before{transform:translateX(26px)}
+    </style>
+<script>
+function updateStatus(isChecked) {
+    const statusValue = isChecked ? 'yes' : 'no';
+    localStorage.setItem('extraz', statusValue);
+    document.getElementById('statusValue').textContent = statusValue;}
+function loadStatus() {
+    const storedValue = localStorage.getItem('extraz');
+    const isChecked = storedValue === 'yes';
+    document.getElementById('toggleSwitch').checked = isChecked;
+    updateStatus(isChecked);}
+document.getElementById('toggleSwitch').addEventListener('change', (event) => {
+    updateStatus(event.target.checked);
+});
+// Ensure the function is called after the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', loadStatus);
+</script>
+
 
 
 
@@ -274,6 +301,7 @@ function playAnimationAndAudio() {
 <a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/SciFi_Cube/SciFi_Cube.pmx';window.location.href = updatedUrl;})()">SciFi_Cube</a>
 <a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/kh_twilighttown/kh_station_plaza/Station_Plaza.pmx';window.location.href = updatedUrl;})()">TwilightTownStation</a>
 <a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/([?&])stage=[^&]*/g, '$1').replace(/(&|\?)$/, '');var newStageParam = encodeURIComponent('/kh_twtnw/Memory\'s_Skyscraper/Memory\'s_Skyscraper.pmx');updatedUrl += (updatedUrl.indexOf('?') > -1 ? '&' : '?') + 'stage=' + newStageParam;window.location.href = updatedUrl;})()">TWTNW Skyscraper</a>
+<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/palette_stage/palette_stage.pmx';window.location.href = updatedUrl;})()">palette_stage</a>
 <a href target="_blank" ="#" onclick="redirectToTargetURL();"><b>[TestStageCoordinates]</b></a>
   </div>
 
