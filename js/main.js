@@ -49,7 +49,12 @@ if (pmx) {
   const vmd2Path = `${basePath}/002.vmd`;
   loader.load(StagePath, (stageObject) => {
     var ambientLight = new THREE.AmbientLight(0xffffff, 1.0); //hardcoded
+try {
     scene.add(ambientLight);
+} catch (error) {
+    console.error("Failed to add ambient light. Reloading the page.", error);
+    window.location.reload();
+}
     scene.add(stageObject);
 //set stage pos.
 let positionXYZ = localStorage.getItem('xyz') || "0, 0, 0";
