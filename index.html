@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <div style="display: flex; flex-direction: row;">
 <div id="readystate">...If vmd will cause keychar err, use https://www.mediafire.com/file/9olqch9pazq3fzd/AnimationSmoother.rar...</div>
+<div id="error"> </div>
 <div id="vmdplay">...</div>
 <div id="xyzvalue">...</div>
 </div>
@@ -148,12 +149,20 @@ document.addEventListener('DOMContentLoaded', function() {
 <a href="?pmx=TLoZ_Link_BOTW)/linkbotw.pmx">BOTW Link</a>
 <a href="?pmx=kh_roxas/kh_roxas.pmx">Roxas</a>
 <a href="?pmx=off/off.pmx">-[OFF]-</a>
+<a href="javascript:var spoiler = document.getElementById('search'); spoiler.open = !spoiler.open;" style="display: inline-block; padding: 1px 2px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 4px; font-family: Arial, sans-serif;">(xtras)</a>
+
+
+
+
+  </div>
+
+<details><summary>2ndChara</summary><div id="pmx2links"></div></details>
+<details id="search"><summary style="display: none;">-</summary>
 <button class="off-button" onclick="window.location.href='?pmx=YusakuFujiki/yusaku.pmx&pmx2=AoiZaizen/AoiZaizen.pmx';" style="background-color: #ffcccc; border: #ff9999; border-radius: 8px; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; transition-duration: 0.4s;">yusaao</button>
 <button class="off-button" onclick="window.location.href='?pmx=Xion%2Fxion.pmx&pmx2=Roxas%2Froxas.pmx';" style="background-color: #ffcccc; border: #ff9999; border-radius: 8px; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; transition-duration: 0.4s;">Xion&Rox</button>
-<button onclick="window.location.href='?pmx=YusakuFujiki%2Fyusaku.pmx&pmx2=AoiZaizen%2FAoiZaizen.pmx&stage=%2Flivestageclub%2Flivestageclubanimated.pmx&vmd=30sechug&vmd2=30sechug_2';">yusao-hug</button>
-  </div>
-<details><summary>2ndChara</summary><div id="pmx2links"></div></details>
+<button onclick="window.location.href='?pmx=YusakuFujiki%2Fyusaku.pmx&pmx2=AoiZaizen%2FAoiZaizen.pmx&stage=%2Flivestageclub%2Flivestageclubanimated.pmx&vmd=30sechug&vmd2=30sechug_2';">yusao-hug</button></details>
 
+<!--Extra--Elements-->
 <div style="display: flex; flex-direction: row;">
 <button id="play" onclick="renderer.domElement.requestFullscreen()" style="background-color: pink; background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.25) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0.25) 75%, transparent 75%, transparent); background-size: 20px 20px; border: none; color: white; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 5px; box-shadow: 0 0 10px rgba(255, 105, 180, 0.5); cursor: pointer; transition: transform 0.3s;" title="Spacebar">Play Animation and Audio</button>      <button id="fullscreenButton" title="F10" style="opacity: 0.2; transition: opacity 0.3s; background-color: #007BFF; border: none; padding: 10px 20px; border-radius: 5px;">Fullscreen</button>
 <label class="switch"><input type="checkbox" id="toggleSwitch" title="extras yes/no"><span class="slider"></span></label>Face/Lips/Extras: <span id="statusValue">Unknown</span>
