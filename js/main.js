@@ -164,6 +164,7 @@ function LoadStage() {
 let animate;
 function startAnimation() {
    document.getElementById('readystate').innerHTML = 'Camera(localstorage): ready - ' + localStorage.getItem('vmd') + ' <a href="javascript:location.reload(true)">Reload</a>';
+document.getElementById("play").disabled = true;
   if (!animate) {
     console.error('Animation function not initialized.');
     return;
