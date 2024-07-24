@@ -819,12 +819,8 @@ THREE.MMDLoader = ( function () {
 							if ( morph2.type === 1 ) {
 
 								updateAttributes( attribute, morph2, ratio );
-                                                                // document.getElementById('readystate') && (document.getElementById('readystate').innerHTML = "<b>Loading Model</b>");
-                                                                document.getElementById('error') && (document.getElementById('error').innerHTML = "<b><u>Loading Model</u></b>");
-                                                                
 
 							} else {
-
 
 								// TODO: implement
 
