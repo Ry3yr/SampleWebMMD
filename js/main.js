@@ -330,6 +330,7 @@ async function LoadModel2() {
       animation: vmdClip,
       physics: true
     });
+    document.getElementById('error') && (document.getElementById('error').innerHTML = ""); //empty error div after loading has finished
     return { mesh: mesh2, helper };
   } catch (error) {
     console.error('Error loading model 2:', error);
