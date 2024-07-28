@@ -1,5 +1,29 @@
 
 
+<script id="glow-vertex-shader" type="x-shader/x-vertex">
+  varying vec3 vNormal;
+  varying vec3 vPosition;
+
+  void main() {
+    vNormal = normal;
+    vPosition = position;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+</script>
+
+<script id="glow-fragment-shader" type="x-shader/x-fragment">
+  uniform vec3 glowColor;
+  uniform float glowIntensity;
+  varying vec3 vNormal;
+  varying vec3 vPosition;
+
+  void main() {
+    float intensity = max(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0);
+    vec3 color = glowColor * intensity * glowIntensity;
+    gl_FragColor = vec4(color, 1.0);
+  }
+</script>
+
 <!--GeneratePmx2Links-->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -65,6 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <input type="text" id="buttonvmdInput" value="001" style="width: 100px;">
 <button type="button" onclick="copyToClipboard()">Copy</button>
 <button type="button" onclick="updateQueryStringParameter('vmd', document.getElementById('buttonvmdInput').value);checkfile();">cstm</button>
+<button type="button" onclick="var value = document.getElementById('buttonvmdInput').value;updateQueryStringParameter('vmd', value);updateQueryStringParameter('vmd2', value + '_2');checkfile();">cstm(2)</button>
 <button type="button" onclick="localStorage.setItem('camid', document.getElementById('buttonvmdInput').value); PoseClickEvent(document.getElementById('buttonvmdInput').value);">cstm+cam</button>
 <input type="checkbox" id="checkboxSendToPHP">
 <label for="checkboxSendToPHP">Send to PHP</label>
@@ -121,22 +146,36 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="pose">
     <!--<button type="button" value="001" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);">vm1</button>-->
     <!--<button type="button" value="001" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);">vm1</button>-->
-    <button type="button" value="001" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">vm1</button>
-    <button type="button" value="002" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">vm2</button>
-    <button type="button" value="003" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">vm3(camoff)</button>
-    <button type="button" value="004walknthink" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">vm4</button>
-    <button type="button" value="005hard-carry" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">tst(audio)</button>
-    <button type="button" value="bts-bestofme" onclick="updateQueryStringParameter('vmd', this.value); localStorage.setItem('camid', this.value);location.reload();">best(audio)</button>
+    <button type="button" value="001" onclick="updateQueryStringParameters(this.value); localStorage.setItem('camid', this.value); location.reload();">vm1</button>
+    <button type="button" value="002" onclick="updateQueryStringParameters(this.value); localStorage.setItem('camid', this.value); location.reload();">vm2</button>
+    <button type="button" value="003" onclick="updateQueryStringParameters(this.value); localStorage.setItem('camid', this.value); location.reload();">vm3(camoff)</button>
+    <button type="button" value="004walknthink" onclick="updateQueryStringParameters(this.value); localStorage.setItem('camid', this.value); location.reload();">vm4</button>
+    <button type="button" value="005hard-carry" onclick="updateQueryStringParameters(this.value); localStorage.setItem('camid', this.value); location.reload();">tst(audio)</button>
+    <button type="button" value="bts-bestofme" onclick="updateQueryStringParameters(this.value); localStorage.setItem('camid', this.value); location.reload();">best(audio)</button>
+
+    <button type="button" value="bts-bestofme" value2="bts-bestofme" onclick="updateQueryStringParameters(this.value, this.getAttribute('value2')); localStorage.setItem('camid', this.value); location.reload();">TwoVMD</button>
 </div>
 <details><summary>All Motions</summary><div class="file-buttons" id="file-buttons"></div></details>
+
+
 <script>
-    function updateQueryStringParameter(key, value) {
-        var url = new URL(window.location.href);
-        var params = new URLSearchParams(url.search);
-        params.set(key, value);
-        url.search = params.toString();
-        history.replaceState(null, '', url.toString());}
+function updateQueryStringParameters(vmdValue, vmd2Value) {
+    var url = new URL(window.location.href);
+    console.log('Initial URL:', url.toString());
+    url.searchParams.set('vmd', vmdValue);
+    console.log('After setting vmd:', url.toString());
+    if (vmd2Value !== undefined && vmd2Value !== null && vmd2Value !== '') {
+        url.searchParams.set('vmd2', vmd2Value);
+        console.log('After setting vmd2:', url.toString());
+    } else {
+        url.searchParams.delete('vmd2');
+        console.log('After deleting vmd2:', url.toString());
+    }
+    window.history.replaceState(null, null, url.toString());
+    console.log('Final URL:', url.toString());
+}
 </script>
+
 
 <!--<button id="loadButton" value="./vmd/002.vmd">Load VMD File</button>-->
 <a href="?pmx=YusakuFujiki/yusaku.pmx">Yu</a>
@@ -147,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <a href="?pmx=TLoZ_Zelda_(Scholar)/zelda_scholar.pmx">BOTW Zelda</a>
 <a href="?pmx=TLoZ_Zelda_(Skyward_Sword)/Zelda_(Skyward_Sword).pmx">SW Zelda</a>
 <a href="?pmx=TLoZ_Link_BOTW)/linkbotw.pmx">BOTW Link</a>
-<a href="?pmx=kh_roxas/kh_roxas.pmx">Roxas</a>
+<a href="?pmx=Roxas/roxas.pmx">Roxas</a>
 <a href="?pmx=off/off.pmx">-[OFF]-</a>
 <a href="javascript:var spoiler = document.getElementById('search'); spoiler.open = !spoiler.open;" style="display: inline-block; padding: 1px 2px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 4px; font-family: Arial, sans-serif;">(xtras)</a>
 
@@ -160,7 +199,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <details id="search"><summary style="display: none;">-</summary>
 <button class="off-button" onclick="window.location.href='?pmx=YusakuFujiki/yusaku.pmx&pmx2=AoiZaizen/AoiZaizen.pmx';" style="background-color: #ffcccc; border: #ff9999; border-radius: 8px; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; transition-duration: 0.4s;">yusaao</button>
 <button class="off-button" onclick="window.location.href='?pmx=Xion%2Fxion.pmx&pmx2=Roxas%2Froxas.pmx';" style="background-color: #ffcccc; border: #ff9999; border-radius: 8px; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; transition-duration: 0.4s;">Xion&Rox</button>
-<button onclick="window.location.href='?pmx=YusakuFujiki%2Fyusaku.pmx&pmx2=AoiZaizen%2FAoiZaizen.pmx&stage=%2Flivestageclub%2Flivestageclubanimated.pmx&vmd=30sechug&vmd2=30sechug_2';">yusao-hug</button></details>
+<button class="off-button" onclick="window.location.href='?pmx=IshizuIshtar/IshizuIshtar.pmx&pmx2=SetoKaiba/SetoKaiba.pmx';" style="background-color: #ffcccc; border: #ff9999; border-radius: 8px; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; transition-duration: 0.4s;">Ishi&Kaiba</button>
+-
+<button onclick="window.location.href='?pmx=YusakuFujiki%2Fyusaku.pmx&pmx2=AoiZaizen%2FAoiZaizen.pmx&stage=%2Flivestageclub%2Flivestageclubanimated.pmx&vmd=30sechug&vmd2=30sechug_2';">yusao-hug</button>
+<button onclick="window.location.href='?pmx=AoiZaizen%2Fkimono%2FAoiZaizen.pmx&pmx2=off%2Foff.pmx&vmd=teamo-duet&stage=/livestageclub/livestageclubanimated.pmx';">(kimono)</button>
+</details>
 
 <!--Extra--Elements-->
 <div style="display: flex; flex-direction: row;">
@@ -305,7 +348,9 @@ function playAnimationAndAudio() {
   <div class="stage">
 <a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/herogarden/herogarden.pmx';window.location.href = updatedUrl;})()">herogarden</a>
 <a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/parkavenue/parkavenue.pmx';window.location.href = updatedUrl;})()">parkavenue</a>
-<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/livestageclub/livestageclubanimated.pmx';window.location.href = updatedUrl;})()">LiveStage</a>
+<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/livestageclub/livestageclubanimated.pmx';window.location.href = updatedUrl;})()">(anim)LiveStage</a>
+<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/changeme/changeme.pmx';window.location.href = updatedUrl;})()">(anim)ChangeMe</a>
+<a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/satisfcation/satisfcation.pmx';window.location.href = updatedUrl;})()">(anim)SatisFactionary</a>
 <a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/h2cu09/h2cu09.pmx';window.location.href = updatedUrl;})()">h2cu09</a>
 <a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/SciFi_Cube/SciFi_Cube.pmx';window.location.href = updatedUrl;})()">SciFi_Cube</a>
 <a href="javascript:(function() {var currentUrl = window.location.href;var updatedUrl = currentUrl.replace(/(\?|&)stage=([^&]*)/g, '') + (currentUrl.indexOf('?') > -1 ? '&' : '?') +'stage=/kh_twilighttown/kh_station_plaza/Station_Plaza.pmx';window.location.href = updatedUrl;})()">TwilightTownStation</a>
@@ -338,6 +383,15 @@ function redirectToTargetURL() {
   <script src="./libs/CCDIKSolver.js"></script>
   <script src="./libs/MMDPhysics.js"></script>
   <!--<script src="./libs/Vmd.js"></script>
+  <script src="./postprocessing/EffectComposer.js"></script>
+  <script src="./postprocessing/RenderPass.js"></script>
+   <script src="./postprocessing/ShaderPass.js"></script>
+  <script src="./postprocessing/FXAAShader.js"></script>
+  <script src="./postprocessing/BloomPass.js"></script>
+  <script src="./postprocessing/Pass.js"></script>
+  <script src="./shaders/ConvolutionShader.js"></script>
+  <script src="./shaders/LuminosityShader.js"></script>
+
   <script src="./libs/VmdFileParser.js"></script>-->
   <!--<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r106/build/three.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r106/examples/js/libs/mmdparser.min.js"></script>
