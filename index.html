@@ -1,29 +1,5 @@
 
 
-<script id="glow-vertex-shader" type="x-shader/x-vertex">
-  varying vec3 vNormal;
-  varying vec3 vPosition;
-
-  void main() {
-    vNormal = normal;
-    vPosition = position;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-</script>
-
-<script id="glow-fragment-shader" type="x-shader/x-fragment">
-  uniform vec3 glowColor;
-  uniform float glowIntensity;
-  varying vec3 vNormal;
-  varying vec3 vPosition;
-
-  void main() {
-    float intensity = max(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0);
-    vec3 color = glowColor * intensity * glowIntensity;
-    gl_FragColor = vec4(color, 1.0);
-  }
-</script>
-
 <!--GeneratePmx2Links-->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -82,8 +58,11 @@ document.addEventListener('DOMContentLoaded', function() {
  <button id="." style="background-color: transparent; border: none;color: transparent;">.__</button>
 <button id="rotateleftButton">RotateLeft</button>
 <button id="rotaterightButton">RotateRight</button>
+<button id="retrieveButton" onclick="const pmxheight = localStorage.getItem('pmxheight'); document.getElementById('pmxdata').innerText = pmxheight !== null ? pmxheight : 'pmxheight not found in local storage';">pmxdata</button><div id="pmxdata"></div>
+
 <a target="_blank" href="https://www.youtube.com/playlist?list=PLBva3abEZvyT-_ajETBGeOCGBA_AFBT5Z#https://www.reddit.com/r/mikumikudance" style=color:blue>r/MMD</a> <a target="_blank" href="https://codepen.io/ryedai1/pens/tags/?selected_tag=mikumikudance" style=color:gray>(tools)</a>
-(<a target="_blank" href="https://ry3yr.github.io/SampleWebMMD-master.zip" style=color:blue>src-DLD</a>) <!--<a target="_blank" href="http://10.10.10.254/data/UsbDisk1/Volume1/SampleWebMMD-master/index.html?pmx=YusakuFujiki/yusaku.pmx&stage=/livestageclub/livestageclubanimated.pmx&vmd=bts-dna" style=color:blue>Offline-TripMate</a>(<a target="_blank" href="https://alceawis.de/qrgen.html?qr=http://10.10.10.254/data/UsbDisk1/Volume1/SampleWebMMD-master/index.html?pmx=YusakuFujiki/yusaku.pmx&stage=/livestageclub/livestageclubanimated.pmx&vmd=bts-dna" style=color:blue>qr</a>)-->
+(<a target="_blank" href="https://github.com/Ry3yr/SampleWebMMD" style=color:blue>src</a>)(<a target="_blank" href="https://ry3yr.github.io/SampleWebMMD-master.zip" style=color:blue>src-DLD</a>)
+<a target="_blank" href="https://www.youtube.com/playlist?list=PLK4C8g4vpj7WfT3z0037RzrEMwor007EV">Mocap</a>(<a target="_blank" href="https://sao.animetheme.com/XR_Animator.html#https://github.com/ButzYung/SystemAnimatorOnline/releases" style=color:blue>WebCamMocap</a>) <br> <!--<a target="_blank" href="http://10.10.10.254/data/UsbDisk1/Volume1/SampleWebMMD-master/index.html?pmx=YusakuFujiki/yusaku.pmx&stage=/livestageclub/livestageclubanimated.pmx&vmd=bts-dna" style=color:blue>Offline-TripMate</a>(<a target="_blank" href="https://alceawis.de/qrgen.html?qr=http://10.10.10.254/data/UsbDisk1/Volume1/SampleWebMMD-master/index.html?pmx=YusakuFujiki/yusaku.pmx&stage=/livestageclub/livestageclubanimated.pmx&vmd=bts-dna" style=color:blue>qr</a>)-->
 </div>
 <details>
 <input type="text" id="buttonvmdInput" value="001" style="width: 100px;">
