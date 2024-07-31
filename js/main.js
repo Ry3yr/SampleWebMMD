@@ -283,7 +283,6 @@ async function fileExists(url) {
 
 
 
-
 async function LoadModel1() {
   let positionXYZ = localStorage.getItem('xyz') || "0, 0, 0";
   let position = new THREE.Vector3(0, 0, 0);
@@ -298,6 +297,14 @@ async function LoadModel1() {
   const mesh = await LoadPMX(Pmx);
   mesh.position.copy(position);
   scene.add(mesh);
+ //Get PMX Height
+  const urlParams = new URLSearchParams(window.location.search);
+  const pmx1 = urlParams.get('pmx') || "AoiZaizen/AoiZaizen.pmx";
+  const boundingBox = new THREE.Box3().setFromObject(mesh);
+  //const height = boundingBox.max.y - boundingBox.min.y;
+  const height = ((boundingBox.max.y - boundingBox.min.y) / 12.97132464115047).toFixed(2); // Convert and round height directly
+  const pmxHeight = `${pmx1.trim()}:${height} cm`;
+  localStorage.setItem('pmxheight', pmxHeight);
   const vmdClip = await LoadVMDAnimation(mesh, false); // Pass false for mesh
   const helper = new THREE.MMDAnimationHelper({ afterglow: 1.0 });
   const mmd = { mesh: mesh, animation: vmdClip };
@@ -324,6 +331,15 @@ async function LoadModel2() {
     //!new URLSearchParams(window.location.search).has('vmd2') && (mesh2.position.x += 15);
     mesh2.position.x = parseInt(new URLSearchParams(window.location.search).get('distance')) || (new URLSearchParams(window.location.search).has('vmd2') ? 0 : 15);
     scene.add(mesh2);
+    // Get PMX2 Height
+    const boundingBox2 = new THREE.Box3().setFromObject(mesh2);
+    //const height2 = boundingBox2.max.y - boundingBox2.min.y;
+    const height2 = ((boundingBox2.max.y - boundingBox2.min.y) / 12.97132464115047).toFixed(2); // Convert and round height directly
+    const pmx2 = new URLSearchParams(window.location.search).get('pmx2') || "AoiZaizen/AoiZaizen.pmx";
+    const pmxHeight2 = `${pmx2.trim()}:${height2} cm`;
+    let pmxHeight = localStorage.getItem('pmxheight') || "";
+    pmxHeight += pmxHeight ? `;${pmxHeight2}` : pmxHeight2;
+    localStorage.setItem('pmxheight', pmxHeight);
     const vmdClip = await LoadVMDAnimation(mesh2, true); // Pass true for mesh2
     const helper = new THREE.MMDAnimationHelper({ afterglow: 1.0 });
     helper.add(mesh2, {
@@ -335,7 +351,6 @@ async function LoadModel2() {
   } catch (error) {
     console.error('Error loading model 2:', error);
     return null;}}
-
 
 
 
