@@ -268,11 +268,14 @@ async function fileExists(url) {
   if (animations.length > 0) {
     const mainAnimation = animations.find(clip => !clip.name.includes('_lips') && !clip.name.includes('_facials'));
     if (mainAnimation) {
-      const vmdPlayTime = mainAnimation.duration.toFixed(2); // Get the VMD animation duration
+      //const vmdPlayTime = mainAnimation.duration.toFixed(2); // Get the VMD animation duration
+      //const vmdPlayTime = `${String(Math.floor(mainAnimation.duration / 60)).padStart(2, '0')}:${String(Math.floor(mainAnimation.duration % 60)).padStart(2, '0')}.${(mainAnimation.duration % 1).toFixed(2).substring(2)}`;
+      const vmdPlayTime = `${String(Math.floor(mainAnimation.duration / 60)).padStart(2, '0')}:${String(Math.floor(mainAnimation.duration % 60))}`;
       localStorage.setItem('vmdplay', vmdPlayTime); // Save the VMD play time to localStorage
       const vmdPlayDiv = document.getElementById('vmdplay');
       if (vmdPlayDiv) {
-        vmdPlayDiv.innerHTML = `<b>VMD Playtime:</b> ${vmdPlayTime} seconds`;}}
+        //vmdPlayDiv.innerHTML = `<b>VMD Playtime:</b> ${vmdPlayTime} seconds`;}}
+        vmdPlayDiv.innerHTML = `${vmdPlayTime}`;}}
     return animations;
   } else {console.log('No VMD files loaded.');
     const readystateDiv = document.getElementById('readystate');
@@ -392,13 +395,49 @@ const far = 1000; // Define the far clipping plane
     animation: cameraVmdClip
   });
   const clock = new THREE.Clock();
+
+let startTime = Date.now();
+let isAnimating = true; // Flag to control the animation
+
+const parseTime = (timeString) => {
+  const [minutes, seconds] = timeString.split(':').map(Number);
+  return (minutes * 60) + seconds;
+};
+
+const getTargetPlaytime = () => {
+  const vmdplayDiv = document.getElementById('vmdplay');
+  if (vmdplayDiv) {
+    const playtimeText = vmdplayDiv.textContent.trim();
+    return parseTime(playtimeText);
+  }
+  return 0; // Default if the div is not found or contains invalid text
+};
+
   animate = () => {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
     helper1.update(delta);
     if (helper2) helper2.update(delta);
     cameraHelper.update(delta); // Update camera animation
-    renderer.render(scene, camera);};}
+    renderer.render(scene, camera)
+
+  const elapsedTime = Math.floor((Date.now() - startTime) / 1000); // Time in seconds
+  const minutes = Math.floor(elapsedTime / 60);
+  const seconds = elapsedTime % 60;
+  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  document.getElementById('vmdcurr').textContent = formattedTime;
+
+  // Get target playtime from the vmdplay div
+  const targetPlaytime = getTargetPlaytime();
+
+  // Check if the elapsed time has reached or exceeded the target playtime
+  if (elapsedTime >= targetPlaytime) {
+    // Animation has finished, reset the start time
+    startTime = Date.now(); // Reset the start time if needed
+    isAnimating = false; // Stop animation
+    document.getElementById('vmdcurr').textContent = "00:00"; }
+;};}
+
 function onProgress(xhr) {
   if (xhr.lengthComputable) {
     const percentComplete = xhr.loaded / xhr.total * 100;
