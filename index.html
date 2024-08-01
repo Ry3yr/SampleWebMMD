@@ -1,5 +1,40 @@
 
 
+<script>
+function updateProgressBar() {
+            const currElem = document.getElementById('vmdcurr');
+            const playElem = document.getElementById('vmdplay');
+            if (!currElem || !playElem) {
+                //console.error('One or more elements are missing');
+                return;}
+            const currTime = parseTime(currElem.textContent);
+            const playTime = parseTime(playElem.textContent);
+            if (currTime === null || playTime === null) {
+                console.error('Invalid time format');
+                return;}
+            if (playTime === 0) {
+                console.error('Play time is zero');
+                return;}
+            const progress = Math.min((currTime / playTime) * 100, 100);
+            const progressBar = document.querySelector('.progress-bar');
+            if (!progressBar) {
+                console.error('Progress bar element is missing');
+                return;}
+            progressBar.style.width = progress + '%';
+            console.log(`Current time: ${currTime}s, Play time: ${playTime}s, Progress: ${progress}%`);}
+        function parseTime(timeStr) {
+            const [minutes, seconds] = timeStr.split(':').map(Number);
+            if (isNaN(minutes) || isNaN(seconds) || minutes < 0 || seconds < 0 || seconds >= 60) {
+                console.error(`Invalid time format: ${timeStr}`);
+                return null;}
+            return (minutes * 60) + seconds;}
+        updateProgressBar();
+        setInterval(updateProgressBar, 1000);
+</script>
+<div class="progress-container" style="width: 300px; height: 10px; border: 2px solid #ff69b4; border-radius: 10px; background-color: #fff; overflow: hidden; position: relative;">
+<div class="progress-bar" style="height: 100%; width: 0; background-color: #ff69b4; transition: width 0.5s ease;"></div></div>
+
+
 <!--GeneratePmx2Links-->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -29,9 +64,15 @@ document.addEventListener('DOMContentLoaded', function() {
 <div style="display: flex; flex-direction: row;">
 <div id="readystate">...If vmd will cause keychar err, use https://www.mediafire.com/file/9olqch9pazq3fzd/AnimationSmoother.rar...</div>
 <div id="error"> </div>
-<div id="vmdplay">...</div>
+<b>&nbsp;Curr&nbsp;</b>
+<div id="vmdcurr">0:00</div>
+<b>&nbsp;VMDPlaytime:&nbsp;</b>
+<div id="vmdplay">0:00</div>
 <div id="xyzvalue">...</div>
 </div>
+
+
+
 <button onclick="togglePhysicsAndReload()">Toggle Physics</button>
 <script>
   function togglePhysicsAndReload() {
@@ -168,10 +209,6 @@ function updateQueryStringParameters(vmdValue, vmd2Value) {
 <a href="?pmx=Roxas/roxas.pmx">Roxas</a>
 <a href="?pmx=off/off.pmx">-[OFF]-</a>
 <a href="javascript:var spoiler = document.getElementById('search'); spoiler.open = !spoiler.open;" style="display: inline-block; padding: 1px 2px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 4px; font-family: Arial, sans-serif;">(xtras)</a>
-
-
-
-
   </div>
 
 <details><summary>2ndChara</summary><div id="pmx2links"></div></details>
