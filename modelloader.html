@@ -9,10 +9,9 @@
       margin: 0;
       overflow: hidden;
     }
-    #material-list {
+    #material-list, #morph-list {
       position: fixed;
       top: 10%;
-      right: 10px;
       width: 200px;
       height: 80%;
       background: rgba(0, 0, 0, 0.5);
@@ -22,24 +21,22 @@
       border-radius: 8px;
       font-family: Arial, sans-serif;
     }
-    #material-list ul {
+    #material-list { right: 10px; }
+    #morph-list { left: 10px; }
+    #material-list ul, #morph-list ul {
       list-style: none;
       padding: 0;
       margin: 0;
     }
-    #material-list li {
+    #material-list li, #morph-list li {
       cursor: pointer;
       margin: 5px 0;
     }
-    #material-list li:hover {
+    #material-list li:hover, #morph-list li:hover {
       background-color: rgba(255, 255, 255, 0.1);
     }
-    .active {
-      color: green;
-    }
-    .inactive {
-      color: red;
-    }
+    .active { color: green; }
+    .inactive { color: red; }
     #controls {
       position: fixed;
       bottom: 20px;
@@ -56,9 +53,7 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    #controls button:hover {
-      background-color: #555;
-    }
+    #controls button:hover { background-color: #555; }
     #zoom-control {
       position: fixed;
       top: 20px;
@@ -67,16 +62,12 @@
       width: 300px;
       color: white;
     }
-    #zoom-control input {
-      width: 100%;
-    }
-    /* Vertical pan control */
+    #zoom-control input { width: 100%; }
     #pan-control {
       position: fixed;
-      top: 10%;
-      left: 10px;
+      top: 20px;
+      left: 225px;
       height: 80%;
-      width: 20px;
       background-color: rgba(0, 0, 0, 0.5);
       color: white;
       display: flex;
@@ -85,7 +76,7 @@
       padding: 10px;
     }
     #pan-control input {
-      transform: rotate(90deg); /* Rotate slider for vertical pan */
+      transform: rotate(90deg);
       width: 100%;
       height: 20px;
     }
@@ -96,6 +87,11 @@
   <div id="material-list">
     <h3>Material List</h3>
     <ul id="materials"></ul>
+  </div>
+
+  <div id="morph-list">
+    <h3>Morph List</h3>
+    <ul id="morphs"></ul>
   </div>
 
   <div id="controls">
@@ -110,10 +106,9 @@
     <input type="range" id="zoom-slider" min="10" max="200" value="50" step="1">
   </div>
 
-  <!-- Vertical Pan Control -->
   <div id="pan-control">
     <label for="pan-slider">Pan:</label>
-    <input type="range" id="pan-slider" min="-50" max="50" value="0" step="1">
+    <input type="range" id="pan-slider" min="10" max="20" value="50" step="0.5">
   </div>
 
   <script src="./libs/three.js"></script>
@@ -127,263 +122,180 @@
   <script src="./libs/MMDPhysics.js"></script>
 
   <script>
-  let scene, renderer, camera, mesh, helper;
-  let ready = false;
-  const windowWidth = window.innerWidth;
-  const windowHeight = window.innerHeight;
-  const clock = new THREE.Clock();
-  const MotionObjects = [
-    { id: "001", VmdClip: null, AudioClip: false },
-  ];
-  let rotateSpeed = 0.01; // Speed for slow rotation
+    let scene, renderer, camera, mesh, helper;
+    let ready = false;
+    const clock = new THREE.Clock();
+    const MotionObjects = [{ id: "001", VmdClip: null, AudioClip: false }];
+    let rotateSpeed = 0.01;
 
-  // Variables for tracking mouse drag
-  let isDragging = false;
-  let previousMousePosition = { x: 0, y: 0 };
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
 
-  function getQueryStringParam(param) {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(param);
-  }
+    function getQueryStringParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
 
-  let Pmx = getQueryStringParam('pmx') || "AoiZaizen/AoiZaizen.pmx";
-  Pmx = "pmx/pronama/" + Pmx;
+    let Pmx = getQueryStringParam('pmx') || "AoiZaizen/AoiZaizen.pmx";
+    Pmx = "pmx/pronama/" + Pmx;
 
-  window.onload = () => {
-    Init();
-    LoadModeler();
-    Render();
-    setupZoomControl();
-    setupPanControl();
-    setupModelDrag(); // Initialize drag functionality
-  }
+    window.onload = () => {
+      Init();
+      LoadModeler();
+      Render();
+      setupZoomControl();
+      setupPanControl();
+      setupModelDrag();
+    }
 
-  Init = () => {
-    scene = new THREE.Scene();
-    const ambient = new THREE.AmbientLight(0xeeeeee);
-    scene.add(ambient);
-    renderer = new THREE.WebGLRenderer({ alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0xcccccc, 0);
-    document.body.appendChild(renderer.domElement);
-    camera = new THREE.PerspectiveCamera(40, windowWidth / windowHeight, 1, 1000);
-    camera.position.set(0, 10, 50);  // Adjust camera position
-    camera.lookAt(0, 10, 0);  // Point the camera to the center
-  }
+    Init = () => {
+      scene = new THREE.Scene();
+      const ambient = new THREE.AmbientLight(0xeeeeee);
+      scene.add(ambient);
+      renderer = new THREE.WebGLRenderer({ alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0xcccccc, 0);
+      document.body.appendChild(renderer.domElement);
+      camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 1000);
+      camera.position.set(0, 10, 50);
+      camera.lookAt(0, 10, 0);
+    }
 
-  LoadModeler = async () => {
-    const loader = new THREE.MMDLoader();
-    LoadPMX = () => {
-      return new Promise(resolve => {
-        loader.load(Pmx, (object) => {
-          mesh = object;
-          scene.add(mesh);
-          updateMaterialList();
-          resolve(true);
-        }, onProgress, onError);
+    LoadModeler = async () => {
+      const loader = new THREE.MMDLoader();
+      loader.load(Pmx, (object) => {
+        mesh = object;
+        scene.add(mesh);
+        updateMaterialList();
+        updateMorphList();
       });
     }
 
-    LoadVMD = (id) => {
-      return new Promise(resolve => {
-        const path = "./" + id + ".vmd";
-        const val = MotionObjects.findIndex(MotionObject => MotionObject.id == id);
-
-        loader.loadAnimation(path, mesh, (vmd) => {
-          vmd.name = id;
-          MotionObjects[val].VmdClip = vmd;
-          VmdControl("001", true); //automatically load 001 motion
-          resolve(true);
-        }, onProgress, onError);
+    updateMaterialList = () => {
+      const materialListContainer = document.getElementById("materials");
+      materialListContainer.innerHTML = '';
+      mesh.material.forEach((material, index) => {
+        const listItem = document.createElement("li");
+        listItem.textContent = material.name || `Material ${index + 1}`;
+        listItem.onclick = () => handleMaterialClick(material, listItem);
+        listItem.classList.add(material.visible ? "active" : "inactive");
+        materialListContainer.appendChild(listItem);
       });
     }
 
-    LoadAudio = (id) => {
-      return new Promise(resolve => {
-        const path = "./audio/" + id + ".mp3";
-        const val = MotionObjects.findIndex(MotionObject => MotionObject.id == id);
+    updateMorphList = () => {
+      const morphListContainer = document.getElementById("morphs");
+      morphListContainer.innerHTML = '';
+      mesh.morphTargetInfluences.forEach((_, index) => {
+        const listItem = document.createElement("li");
+        listItem.textContent = mesh.morphTargetDictionary
+          ? Object.keys(mesh.morphTargetDictionary)[index]
+          : `Morph ${index + 1}`;
+        listItem.onclick = () => handleMorphClick(index, listItem);
+        listItem.classList.add(mesh.morphTargetInfluences[index] > 0 ? "active" : "inactive");
+        morphListContainer.appendChild(listItem);
+      });
+    }
 
-        if (MotionObjects[val].AudioClip) {
-          new THREE.AudioLoader().load(path, (buffer) => {
-            const listener = new THREE.AudioListener();
-            const audio = new THREE.Audio(listener).setBuffer(buffer);
-            MotionObjects[val].AudioClip = audio;
+    handleMaterialClick = (material, listItem) => {
+      material.visible = !material.visible;
+      if (material.visible) {
+        listItem.classList.remove("inactive");
+        listItem.classList.add("active");
+      } else {
+        listItem.classList.remove("active");
+        listItem.classList.add("inactive");
+      }
+    }
 
-            resolve(true);
-          }, onProgress, onError);
-        } else {
-          resolve(false);
+    handleMorphClick = (index, listItem) => {
+      mesh.morphTargetInfluences[index] = mesh.morphTargetInfluences[index] === 0 ? 1 : 0;
+      if (mesh.morphTargetInfluences[index] > 0) {
+        listItem.classList.remove("inactive");
+        listItem.classList.add("active");
+      } else {
+        listItem.classList.remove("active");
+        listItem.classList.add("inactive");
+      }
+    }
+
+    onProgress = (xhr) => {
+      if (xhr.lengthComputable) {
+        const percentComplete = xhr.loaded / xhr.total * 100;
+        console.log(Math.round(percentComplete, 2) + '% downloaded');
+      }
+    }
+
+    onError = (xhr) => { console.log("ERROR"); }
+
+    Render = () => {
+      requestAnimationFrame(Render);
+      renderer.clear();
+      renderer.render(scene, camera);
+      if (ready) {
+        helper.update(clock.getDelta());
+      }
+    }
+
+    rotateModelLeft = () => { mesh.rotation.y -= 0.1; }
+    rotateModelRight = () => { mesh.rotation.y += 0.1; }
+
+    slowRotateLeft = () => {
+      let angle = 0;
+      const rotateLeft = () => {
+        if (angle < Math.PI * 2) {
+          mesh.rotation.y -= rotateSpeed;
+          angle += rotateSpeed;
+          requestAnimationFrame(rotateLeft);
         }
+      };
+      rotateLeft();
+    }
+
+    slowRotateRight = () => {
+      let angle = 0;
+      const rotateRight = () => {
+        if (angle < Math.PI * 2) {
+          mesh.rotation.y += rotateSpeed;
+          angle += rotateSpeed;
+          requestAnimationFrame(rotateRight);
+        }
+      };
+      rotateRight();
+    }
+
+setupZoomControl = () => {
+  const zoomSlider = document.getElementById("zoom-slider");
+  zoomSlider.addEventListener("input", (event) => {
+    const zoomValue = event.target.value;
+    // Instead of modifying the camera position directly, use a zoom factor or adjust the camera field of view.
+    camera.position.z = Math.max(10, Math.min(200, zoomValue)); // Keeps zoom within a sensible range
+  });
+}
+
+    setupPanControl = () => {
+      const panSlider = document.getElementById("pan-slider");
+      panSlider.addEventListener("input", (event) => {
+        const panValue = event.target.value;
+        camera.position.y = panValue;
       });
     }
 
-    await LoadPMX();
-    await Promise.all(MotionObjects.map(async (MotionObject) => {
-      return await LoadVMD(MotionObject.id);
-    }));
-    await Promise.all(MotionObjects.map(async (MotionObject) => {
-      return await LoadAudio(MotionObject.id);
-    }));
-    VmdControl("loop", true);
-  }
-
-  updateMaterialList = () => {
-    const materialListContainer = document.getElementById("materials");
-    materialListContainer.innerHTML = '';  // Clear any existing items
-
-    mesh.material.forEach((material, index) => {
-      const listItem = document.createElement("li");
-      listItem.textContent = material.name || `Material ${index + 1}`;
-      listItem.onclick = () => handleMaterialClick(material, listItem);
-      listItem.classList.add(material.visible ? "active" : "inactive");
-      materialListContainer.appendChild(listItem);
-    });
-  }
-
-  handleMaterialClick = (material, listItem) => {
-    // Toggle visibility
-    material.visible = !material.visible;
-    
-    // Update list item style
-    if (material.visible) {
-      listItem.classList.remove("inactive");
-      listItem.classList.add("active");
-    } else {
-      listItem.classList.remove("active");
-      listItem.classList.add("inactive");
-    }
-  }
-
-  VmdControl = (id, loop) => {
-    const index = MotionObjects.findIndex(MotionObject => MotionObject.id == id);
-    if (index === -1) {
-      console.log("not Found ID");
-      return;
-    }
-    ready = false;
-    helper = new THREE.MMDAnimationHelper({ afterglow: 2.0, resetPhysicsOnLoop: true });
-    helper.add(mesh, {
-      animation: MotionObjects[index].VmdClip,
-      physics: true
-    });
-    if (MotionObjects[index].AudioClip) {
-      MotionObjects[index].AudioClip.play();
-    }
-    const mixer = helper.objects.get(mesh).mixer;
-    if (!loop) {
-      mixer.existingAction(MotionObjects[index].VmdClip).setLoop(THREE.LoopOnce);
-    }
-    mixer.addEventListener("loop", (event) => {
-      console.log("loop");
-    });
-    mixer.addEventListener("finished", (event) => {
-      console.log("finished");
-      VmdControl("loop", true);
-    });
-
-    ready = true;
-  }
-
-  onProgress = (xhr) => {
-    if (xhr.lengthComputable) {
-      const percentComplete = xhr.loaded / xhr.total * 100;
-      console.log(Math.round(percentComplete, 2) + '% downloaded');
-    }
-  }
-
-  onError = (xhr) => {
-    console.log("ERROR");
-  }
-
-  Render = () => {
-    requestAnimationFrame(Render);
-    renderer.clear();
-    renderer.render(scene, camera);
-    if (ready) {
-      helper.update(clock.getDelta());
-    }
-  }
-
-  // Functions for rotating the model
-  rotateModelLeft = () => {
-    mesh.rotation.y -= 0.1;
-  }
-
-  rotateModelRight = () => {
-    mesh.rotation.y += 0.1;
-  }
-
-  slowRotateLeft = () => {
-    let angle = 0;
-    const rotateLeft = () => {
-      if (angle < Math.PI * 2) {
-        mesh.rotation.y -= rotateSpeed;  // Slow rotation to the left
-        angle += rotateSpeed;
-        requestAnimationFrame(rotateLeft);
-      }
-    };
-    rotateLeft();
-  }
-
-  slowRotateRight = () => {
-    let angle = 0;
-    const rotateRight = () => {
-      if (angle < Math.PI * 2) {
-        mesh.rotation.y += rotateSpeed;  // Slow rotation to the right
-        angle += rotateSpeed;
-        requestAnimationFrame(rotateRight);
-      }
-    };
-    rotateRight();
-  }
-
-  // Add zoom control
-  setupZoomControl = () => {
-    const zoomSlider = document.getElementById('zoom-slider');
-    zoomSlider.addEventListener('input', (event) => {
-      const zoomValue = event.target.value;
-      camera.position.z = 50 - (zoomValue / 2); // Adjust the zoom level
-    });
-  }
-
-  // Add pan control
-  setupPanControl = () => {
-    const panSlider = document.getElementById('pan-slider');
-    panSlider.addEventListener('input', (event) => {
-      const panValue = event.target.value;
-      camera.position.y = 1 + (panValue); // Adjust the vertical pan
-    });
-  }
-
-  // Set up model drag for panning the model
-  setupModelDrag = () => {
-    const canvas = renderer.domElement;
-
-    canvas.addEventListener('mousedown', (event) => {
-      isDragging = true;
-      previousMousePosition = { x: event.clientX, y: event.clientY };
-    });
-
-    canvas.addEventListener('mousemove', (event) => {
-      if (isDragging) {
-        const deltaX = event.clientX - previousMousePosition.x;
-        const deltaY = event.clientY - previousMousePosition.y;
-
-        mesh.position.x += deltaX * 0.1; // Move left/right
-        mesh.position.y -= deltaY * 0.1; // Move up/down
-
+    setupModelDrag = () => {
+      document.addEventListener("mousedown", (event) => { isDragging = true; });
+      document.addEventListener("mousemove", (event) => {
+        if (isDragging) {
+          const deltaMove = {
+            x: event.clientX - previousMousePosition.x,
+            y: event.clientY - previousMousePosition.y,
+          };
+          mesh.rotation.y += deltaMove.x * 0.0005;
+        }
         previousMousePosition = { x: event.clientX, y: event.clientY };
-      }
-    });
-
-    canvas.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
-
-    canvas.addEventListener('mouseleave', () => {
-      isDragging = false;
-    });
-  }
-</script>
-
+      });
+      document.addEventListener("mouseup", () => { isDragging = false; });
+    }
+  </script>
+</body>
+</html>
