@@ -24,7 +24,8 @@ Furthermore most Android apps (mqo f.e.) and iOS might not support thos special 
 
 (The usual approach - right image side, should work in virtually all cases,
 and is highly recommended, as all major apps (VROID) and tools will see this as default way to handle mouth and eyes)
-
 Mostly this will affect models ported from videogames or the like.
 Perhaps people porting those should consider this when porting models,
 to wide usecase of their model output.
+
+2024/12/8 BoneMorphs can be converted to Blendshape Pures quite easily in PMXE actually: https://www.youtube.com/watch?v=If6KQASKFV4#https://i.ibb.co/C9mLz13/Screenshot-2024-12-08-08-25-38.jpg
