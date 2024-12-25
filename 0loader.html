@@ -1,0 +1,120 @@
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+</head>
+<body>
+  <!--<div class="pose"><input type="button" value="pose2" onclick="PoseClickEvent(this.value)"></div>-->
+  <script src="./libs/three.js"></script>
+  <!--<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r106/examples/js/libs/mmdparser.min.js"></script>-->
+  <script src="./libs/mmdparser-obsolete.min.js"></script>
+  <script src="./libs/ammo.min.js"></script>
+  <script src="./libs/TGALoader.js"></script>
+  <script src="./libs/MMDLoader.js"></script>
+  <script src="./libs/MMDAnimationHelper.js"></script>
+  <script src="./libs/CCDIKSolver.js"></script>
+  <script src="./libs/MMDPhysics.js"></script>
+  <script>
+    let scene, renderer, camera, mesh, helper;
+    let ready = false;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const clock = new THREE.Clock();
+    const urlParams = new URLSearchParams(window.location.search);
+    const modelPath = urlParams.get('pmx') || './pmx/pronama/AoiZaizen/AoiZaizen.pmx'; // Default model path
+    const vmdPath = urlParams.get('vmd') || 'bts-bestofme'; // Default VMD path (without extension)
+    window.onload = () => {
+      Init();
+      LoadModeler();
+      Render();
+    }
+    Init = () => {
+      scene = new THREE.Scene();
+      const ambient = new THREE.AmbientLight(0xeeeeee);
+      scene.add(ambient);
+      renderer = new THREE.WebGLRenderer({ alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0xcccccc, 0);
+      document.body.appendChild(renderer.domElement);
+      camera = new THREE.PerspectiveCamera(40, windowWidth / windowHeight, 1, 1000);
+        camera.position.set(0, 19, 50);
+    }
+    LoadModeler = async () => {
+      const loader = new THREE.MMDLoader();
+      LoadPMX = () => {
+        return new Promise(resolve => {
+          loader.load(modelPath, (object) => {
+            mesh = object;
+            scene.add(mesh);
+            resolve(true);
+          }, onProgress, onError);
+        });
+      }
+      LoadVMD = (vmd) => {
+        return new Promise(resolve => {
+          const path = `./vmd/${vmd}.vmd`; // Correct VMD path format
+          loader.loadAnimation(path, mesh, (vmdClip) => {
+            vmdClip.name = vmd;
+            VmdControl(vmd, vmdClip);
+            resolve(true);
+          }, onProgress, onError);
+        });
+      }
+      await LoadPMX();
+      await LoadVMD(vmdPath);
+    }
+    VmdControl = (id, vmdClip, loop = true) => {
+      ready = false;
+      helper = new THREE.MMDAnimationHelper({ afterglow: 2.0, resetPhysicsOnLoop: true });
+      helper.add(mesh, {
+        animation: vmdClip,
+        physics: false
+      });
+      if (vmdClip) {
+        const mixer = helper.objects.get(mesh).mixer;
+        if (!loop) {
+          mixer.existingAction(vmdClip).setLoop(THREE.LoopOnce);
+        }
+        mixer.addEventListener("loop", () => {
+          console.log("loop");
+        });
+        mixer.addEventListener("finished", () => {
+          console.log("finished");
+          VmdControl(id, vmdClip, true);
+        });
+      }
+      ready = true;
+    }
+    onProgress = (xhr) => {
+      if (xhr.lengthComputable) {
+        const percentComplete = (xhr.loaded / xhr.total) * 100;
+        console.log(Math.round(percentComplete, 2) + '% downloaded');
+      }
+    }
+    onError = (xhr) => {
+      console.log("ERROR");
+    }
+    Render = () => {
+      requestAnimationFrame(Render);
+      renderer.clear();
+      renderer.render(scene, camera);
+
+      if (ready) {
+        helper.update(clock.getDelta());
+      }
+    }
+    PoseClickEvent = (id) => {
+      switch (id) {
+        case "pose2":
+          VmdControl("bts-bestofme", null, false);
+          break;
+
+        default:
+          VmdControl("loop", null, true);
+          break;
+      }
+    }
+  </script>
+</body>
