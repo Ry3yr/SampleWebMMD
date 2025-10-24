@@ -1,3 +1,5 @@
+<a href="javascript:location.href=location.href+(location.href.includes('?')?'&':'?')+'redraw=yes'">Redraw_Model_Tex_Periodically</a>
+<br>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,6 +33,8 @@
     #material-list li, #morph-list li {
       cursor: pointer;
       margin: 5px 0;
+      display: flex;
+      align-items: center;
     }
     #material-list li:hover, #morph-list li:hover {
       background-color: rgba(255, 255, 255, 0.1);
@@ -80,12 +84,31 @@
       width: 100%;
       height: 20px;
     }
+    .material-checkbox {
+      margin-right: 8px;
+    }
+    #check-all-btn {
+      margin-top: 10px;
+      padding: 5px 10px;
+      background-color: #444;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    #check-all-btn:hover {
+      background-color: #666;
+    }
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
 
   <div id="material-list">
     <h3>Material List</h3>
+    <button id="check-all-btn" class="hidden">Check All</button>
     <ul id="materials"></ul>
   </div>
 
@@ -130,6 +153,11 @@
 
     let isDragging = false;
     let previousMousePosition = { x: 0, y: 0 };
+    
+    // New variables for texture redraw
+    let redrawEnabled = false;
+    let redrawInterval = null;
+    let materialCheckboxes = new Map(); // Map to track checkbox states
 
     function getQueryStringParam(param) {
       const urlParams = new URLSearchParams(window.location.search);
@@ -146,6 +174,12 @@
       setupZoomControl();
       setupPanControl();
       setupModelDrag();
+      
+      // Check if redraw is enabled via query string
+      if (getQueryStringParam('redraw') === 'yes') {
+        redrawEnabled = true;
+        console.log("Texture redraw enabled");
+      }
     }
 
     Init = () => {
@@ -169,19 +203,74 @@
         scene.add(mesh);
         updateMaterialList();
         updateMorphList();
+        
+        // Start redraw interval if enabled
+        if (redrawEnabled) {
+          startTextureRedraw();
+        }
       });
     }
 
     updateMaterialList = () => {
       const materialListContainer = document.getElementById("materials");
       materialListContainer.innerHTML = '';
+      materialCheckboxes.clear();
+      
       mesh.material.forEach((material, index) => {
         const listItem = document.createElement("li");
-        listItem.textContent = material.name || `Material ${index + 1}`;
-        listItem.onclick = () => handleMaterialClick(material, listItem);
+        
+        // Only create checkbox if redraw is enabled
+        if (redrawEnabled) {
+          // Create checkbox
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.className = "material-checkbox";
+          checkbox.checked = index === 0; // Only first material checked by default
+          
+          // Store checkbox state
+          materialCheckboxes.set(material, checkbox.checked);
+          
+          // Add change event listener
+          checkbox.addEventListener("change", () => {
+            materialCheckboxes.set(material, checkbox.checked);
+          });
+          
+          listItem.appendChild(checkbox);
+        }
+        
+        // Material name
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = material.name || `Material ${index + 1}`;
+        
+        // Add click event for visibility toggle
+        nameSpan.onclick = () => handleMaterialClick(material, listItem);
+        
+        // Assemble list item
+        listItem.appendChild(nameSpan);
+        
+        // Set initial visibility state
         listItem.classList.add(material.visible ? "active" : "inactive");
         materialListContainer.appendChild(listItem);
       });
+      
+      // Show/hide check all button based on redraw status
+      const checkAllBtn = document.getElementById("check-all-btn");
+      if (redrawEnabled) {
+        checkAllBtn.classList.remove("hidden");
+        checkAllBtn.addEventListener("click", () => {
+          const checkboxes = document.querySelectorAll(".material-checkbox");
+          checkboxes.forEach(checkbox => {
+            checkbox.checked = true;
+            // Update our checkbox state map
+            const materialIndex = Array.from(checkboxes).indexOf(checkbox);
+            if (materialIndex !== -1) {
+              materialCheckboxes.set(mesh.material[materialIndex], true);
+            }
+          });
+        });
+      } else {
+        checkAllBtn.classList.add("hidden");
+      }
     }
 
     updateMorphList = () => {
@@ -218,6 +307,51 @@
         listItem.classList.remove("active");
         listItem.classList.add("inactive");
       }
+    }
+
+    startTextureRedraw = () => {
+      // Clear any existing interval
+      if (redrawInterval) {
+        clearInterval(redrawInterval);
+      }
+      
+      // Set up new interval for texture redraw
+      redrawInterval = setInterval(() => {
+        redrawTextures();
+      }, 7000); // 7 seconds
+    }
+
+    redrawTextures = () => {
+      if (!mesh || !mesh.material) return;
+      
+      console.log("Redrawing textures...");
+      
+      mesh.material.forEach((material, index) => {
+        // Only redraw if the material is checked
+        if (materialCheckboxes.get(material)) {
+          // Force texture reload by modifying the texture URL
+          // This is a common technique to bypass browser caching
+          if (material.map) {
+            material.map.needsUpdate = true;
+            // Add a timestamp to force reload
+            const originalSrc = material.map.image?.currentSrc || material.map.image?.src;
+            if (originalSrc) {
+              material.map.image.src = originalSrc + '?t=' + Date.now();
+            }
+          }
+          
+          // Also update other texture maps if they exist
+          const textureTypes = ['normalMap', 'specularMap', 'alphaMap', 'emissiveMap', 'bumpMap'];
+          textureTypes.forEach(type => {
+            if (material[type]) {
+              material[type].needsUpdate = true;
+            }
+          });
+          
+          // Mark material for update
+          material.needsUpdate = true;
+        }
+      });
     }
 
     onProgress = (xhr) => {
@@ -265,14 +399,13 @@
       rotateRight();
     }
 
-setupZoomControl = () => {
-  const zoomSlider = document.getElementById("zoom-slider");
-  zoomSlider.addEventListener("input", (event) => {
-    const zoomValue = event.target.value;
-    // Instead of modifying the camera position directly, use a zoom factor or adjust the camera field of view.
-    camera.position.z = Math.max(10, Math.min(200, zoomValue)); // Keeps zoom within a sensible range
-  });
-}
+    setupZoomControl = () => {
+      const zoomSlider = document.getElementById("zoom-slider");
+      zoomSlider.addEventListener("input", (event) => {
+        const zoomValue = event.target.value;
+        camera.position.z = Math.max(10, Math.min(200, zoomValue));
+      });
+    }
 
     setupPanControl = () => {
       const panSlider = document.getElementById("pan-slider");
