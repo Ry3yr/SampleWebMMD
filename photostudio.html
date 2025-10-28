@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>PMX + VPD Viewer (Mobile Optimized)</title>
+<script src="./libs/three.js"></script>
+<script src="./libs/mmdparser.min.js"></script>
+<script src="./libs/ammo.min.js"></script>
+<script src="./libs/TGALoader.js"></script>
+<script src="./libs/MMDLoader.js"></script>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  touch-action: none;
+}
+
+body {
+  overflow: hidden;
+  background: #1a1a2e;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  height: 100vh;
+  width: 100vw;
+}
+
+#container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+#loading {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 20px 30px;
+  border-radius: 10px;
+  z-index: 10;
+  text-align: center;
+  font-size: 18px;
+}
+
+#info {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 12px;
+  border-radius: 10px;
+  z-index: 5;
+  max-width: 90%;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+#info h1 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+#controls {
+  position: fixed;
+  bottom: 20px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  z-index: 5;
+  padding: 0 20px;
+}
+
+.control-btn {
+  background: rgba(30, 30, 60, 0.8);
+  border: 2px solid #4a4a8a;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
+  min-width: 140px;
+}
+
+.control-btn:active {
+  background: rgba(60, 60, 100, 0.9);
+  transform: scale(0.95);
+}
+
+.control-btn.active {
+  background: rgba(80, 80, 160, 0.9);
+  border-color: #8a8aff;
+}
+
+#model-selector {
+  position: fixed;
+  top: 80px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border-radius: 10px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-btn {
+  background: rgba(40, 40, 80, 0.8);
+  border: 1px solid #5a5aaa;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.model-btn.active {
+  background: rgba(80, 80, 160, 0.9);
+  border-color: #8a8aff;
+}
+
+#help-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 20;
+  max-width: 90%;
+  max-height: 80%;
+  overflow-y: auto;
+  display: none;
+}
+
+#help-overlay h2 {
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.help-section {
+  margin-bottom: 15px;
+}
+
+.help-section h3 {
+  margin-bottom: 8px;
+  color: #8a8aff;
+}
+
+.help-key {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin: 0 2px;
+  font-family: monospace;
+}
+
+#close-help {
+  display: block;
+  margin: 15px auto 0;
+  padding: 8px 20px;
+  background: #4a4a8a;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  cursor: pointer;
+}
+
+#mode-indicator {
+  position: fixed;
+  top: 10px;
+  right: 60px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 12px;
+  border-radius: 6px;
+  z-index: 5;
+  font-size: 14px;
+}
+
+#bone-controls {
+  position: fixed;
+  top: 150px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border-radius: 10px;
+  z-index: 5;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 200px;
+}
+
+.bone-section {
+  margin-bottom: 10px;
+}
+
+.bone-section h4 {
+  margin-bottom: 5px;
+  color: #8a8aff;
+  font-size: 12px;
+}
+
+.bone-btn {
+  background: rgba(60, 60, 100, 0.8);
+  border: 1px solid #6a6aaa;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  margin: 2px;
+  width: calc(50% - 4px);
+  display: inline-block;
+  text-align: center;
+}
+
+.bone-btn.active {
+  background: rgba(100, 100, 200, 0.9);
+  border-color: #8a8aff;
+}
+
+#selected-bone-info {
+  position: fixed;
+  top: 50%;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 10px;
+  border-radius: 10px;
+  z-index: 5;
+  font-size: 12px;
+  display: none;
+}
+
+#bone-transform-controls {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border-radius: 10px;
+  z-index: 5;
+  display: none;
+  gap: 10px;
+}
+
+.transform-btn {
+  background: rgba(60, 60, 100, 0.8);
+  border: 1px solid #6a6aaa;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 80px;
+}
+
+.transform-btn.active {
+  background: rgba(100, 100, 200, 0.9);
+  border-color: #8a8aff;
+}
+
+#gesture-help {
+  position: fixed;
+  bottom: 180px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 12px;
+  border-radius: 6px;
+  z-index: 5;
+  font-size: 12px;
+  text-align: center;
+  display: none;
+}
+
+@media (max-width: 480px) {
+  #info {
+    font-size: 12px;
+    padding: 10px;
+  }
+  
+  #info h1 {
+    font-size: 14px;
+  }
+  
+  .control-btn {
+    padding: 10px 15px;
+    font-size: 14px;
+    min-width: 120px;
+  }
+  
+  #mode-indicator {
+    top: 60px;
+    right: 10px;
+  }
+  
+  #bone-controls {
+    top: 120px;
+    max-width: 180px;
+  }
+  
+  #bone-transform-controls {
+    bottom: 100px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .transform-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-width: 70px;
+  }
+  
+  #gesture-help {
+    bottom: 160px;
+    font-size: 11px;
+  }
+}
+
+#help-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(30, 30, 60, 0.8);
+  border: 2px solid #4a4a8a;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  z-index: 5;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bone-helper {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bone-helper:hover {
+  transform: scale(1.2);
+}
+
+#mobile-gesture-info {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 15;
+  text-align: center;
+  display: none;
+  max-width: 90%;
+}
+
+.gesture-item {
+  margin: 10px 0;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+}
+</style>
+</head>
+<body>
+<div id="container"></div>
+<div id="loading">Loading models...</div>
+<div id="info">
+  <h1>PMX + VPD Viewer</h1>
+  <p>Touch models to move them, empty space to rotate/camera</p>
+  <p id="modelInfo"></p>
+</div>
+
+<div id="mode-indicator">Mode: Model Control</div>
+<button id="help-btn">?</button>
+
+<div id="selected-bone-info">No bone selected</div>
+
+<div id="mobile-gesture-info">
+  <h3>Mobile Gestures Guide</h3>
+  <div class="gesture-item">
+    <strong>Touch Model + Drag:</strong> Move model
+  </div>
+  <div class="gesture-item">
+    <strong>Touch Empty Space + Drag:</strong> Rotate model (Model Mode) / Orbit camera (Camera Mode)
+  </div>
+  <div class="gesture-item">
+    <strong>Two Finger Drag:</strong> Pan camera
+  </div>
+  <div class="gesture-item">
+    <strong>Pinch:</strong> Zoom camera
+  </div>
+  <div class="gesture-item">
+    <strong>Double Tap Bone:</strong> Select bone (Bone Mode)
+  </div>
+  <div class="gesture-item">
+    <strong>Long Press + Drag Bone:</strong> Move bone (Bone Mode)
+  </div>
+  <button id="close-gesture-help" style="margin-top: 15px; padding: 8px 16px; background: #4a4a8a; color: white; border: none; border-radius: 5px; cursor: pointer;">
+    Got it!
+  </button>
+</div>
+
+<div id="bone-controls">
+  <div class="bone-section">
+    <h4>Head & Neck</h4>
+    <button class="bone-btn" data-bone="neck">Neck</button>
+    <button class="bone-btn" data-bone="head">Head</button>
+  </div>
+  
+  <div class="bone-section">
+    <h4>Arms & Hands</h4>
+    <button class="bone-btn" data-bone="shoulder_l">Left Shoulder</button>
+    <button class="bone-btn" data-bone="shoulder_r">Right Shoulder</button>
+    <button class="bone-btn" data-bone="arm_l">Left Arm</button>
+    <button class="bone-btn" data-bone="arm_r">Right Arm</button>
+    <button class="bone-btn" data-bone="hand_l">Left Hand</button>
+    <button class="bone-btn" data-bone="hand_r">Right Hand</button>
+  </div>
+  
+  <div class="bone-section">
+    <h4>Legs & Feet</h4>
+    <button class="bone-btn" data-bone="leg_l">Left Leg</button>
+    <button class="bone-btn" data-bone="leg_r">Right Leg</button>
+    <button class="bone-btn" data-bone="knee_l">Left Knee</button>
+    <button class="bone-btn" data-bone="knee_r">Right Knee</button>
+    <button class="bone-btn" data-bone="foot_l">Left Foot</button>
+    <button class="bone-btn" data-bone="foot_r">Right Foot</button>
+  </div>
+  
+  <div class="bone-section">
+    <h4>Spine</h4>
+    <button class="bone-btn" data-bone="spine">Spine</button>
+    <button class="bone-btn" data-bone="waist">Waist</button>
+  </div>
+  
+  <button id="reset-bones" class="control-btn" style="margin-top: 10px; min-width: auto;">Reset Bones</button>
+</div>
+
+<div id="bone-transform-controls">
+  <button id="move-bone" class="transform-btn active">Move</button>
+  <button id="rotate-bone" class="transform-btn">Rotate</button>
+  <button id="reset-bone-transform" class="transform-btn">Reset</button>
+</div>
+
+<div id="gesture-help">
+  <div>👆 Touch model to move, empty space to rotate</div>
+</div>
+
+<div id="help-overlay">
+  <h2>Controls Guide</h2>
+  
+  <div class="help-section">
+    <h3>Mobile Touch Controls</h3>
+    <p><strong>Touch Model + Drag:</strong> Move model</p>
+    <p><strong>Touch Empty Space + Drag:</strong> Rotate model (Model Mode) / Orbit camera (Camera Mode)</p>
+    <p><strong>Two Finger Drag:</strong> Pan camera</p>
+    <p><strong>Pinch:</strong> Zoom camera</p>
+    <p><strong>Double Tap Bone:</strong> Select bone (Bone Mode)</p>
+    <p><strong>Long Press + Drag Bone:</strong> Move bone (Bone Mode)</p>
+  </div>
+  
+  <div class="help-section">
+    <h3>Control Modes</h3>
+    <p><span class="help-key">Model Mode</span> - Move and rotate models</p>
+    <p><span class="help-key">Camera Mode</span> - Control camera view</p>
+    <p><span class="help-key">Bone Mode</span> - Edit individual bone positions</p>
+  </div>
+  
+  <div class="help-section">
+    <h3>Bone Editing (Bone Mode Only)</h3>
+    <p><span class="help-key">Tap Bone</span> - Select bone</p>
+    <p><span class="help-key">Long Press + Drag</span> - Move selected bone</p>
+    <p><span class="help-key">Two Finger Rotate</span> - Rotate selected bone</p>
+  </div>
+  
+  <button id="close-help">Close</button>
+</div>
+
+<div id="model-selector">
+  <button class="model-btn active" data-model="both">Both Models</button>
+  <button class="model-btn" data-model="model1">Model 1</button>
+  <button class="model-btn" data-model="model2">Model 2</button>
+</div>
+
+<div id="controls">
+  <button id="toggleMode" class="control-btn">Camera Mode</button>
+  <button id="toggleBones" class="control-btn">Bone Mode</button>
+  <button id="resetView" class="control-btn">Reset View</button>
+  <button id="toggleWireframe" class="control-btn">Wireframe</button>
+</div>
+
+<script>
+// Get URL parameters
+const urlParams = new URLSearchParams(window.location.search);
+const pmxPath1 = urlParams.get("pmx");
+const pmxPath2 = urlParams.get("pmx2");
+const vpdPath1 = urlParams.get("vpd");
+const vpdPath2 = urlParams.get("vpd2");
+
+let scene, camera, renderer;
+let model1, model2;
+let loader;
+
+// Input control variables
+let isRotating = false;
+let isMovingModel = false;
+let isPanning = false;
+let rotateStartX = 0, rotateStartY = 0;
+let moveStartX = 0, moveStartY = 0;
+let panStartX = 0, panStartY = 0;
+let currentModel = 'both';
+let controlMode = 'model';
+
+// Keyboard state
+const keys = {};
+
+// Camera control variables
+let cameraTarget = new THREE.Vector3(0, 0, 0);
+let cameraDistance = 25;
+let cameraPhi = Math.PI / 6;
+let cameraTheta = 0;
+
+// Touch state
+let touchState = {
+  isTwoFinger: false,
+  initialDistance: 0,
+  initialPan: { x: 0, y: 0 },
+  lastTapTime: 0,
+  isLongPress: false,
+  longPressTimer: null,
+  isTouchingModel: false
+};
+
+// Bone editing variables
+let selectedBone = null;
+let selectedModel = null;
+let boneHelpers = [];
+let isDraggingBone = false;
+let boneTransformMode = 'move';
+let dragPlane = new THREE.Plane();
+let dragStartPoint = new THREE.Vector3();
+let dragStartBonePosition = new THREE.Vector3();
+let dragStartBoneRotation = new THREE.Euler();
+
+const boneMappings = {
+  'neck': ['首', 'neck', 'kubi'],
+  'head': ['頭', 'head', 'atama'],
+  'shoulder_l': ['左肩', 'shoulder_l', 'left shoulder', '左腕'],
+  'shoulder_r': ['右肩', 'shoulder_r', 'right shoulder', '右腕'],
+  'arm_l': ['左腕', 'arm_l', 'left arm', '左上腕'],
+  'arm_r': ['右腕', 'arm_r', 'right arm', '右上腕'],
+  'hand_l': ['左手', 'hand_l', 'left hand', '左手首'],
+  'hand_r': ['右手', 'hand_r', 'right hand', '右手首'],
+  'leg_l': ['左足', 'leg_l', 'left leg', '左大腿'],
+  'leg_r': ['右足', 'leg_r', 'right leg', '右大腿'],
+  'knee_l': ['左ひざ', 'knee_l', 'left knee', '左ひざ'],
+  'knee_r': ['右ひざ', 'knee_r', 'right knee', '右ひざ'],
+  'foot_l': ['左足首', 'foot_l', 'left foot', '左足先'],
+  'foot_r': ['右足首', 'foot_r', 'right foot', '右足先'],
+  'spine': ['上半身', 'spine', 'upper body', '上半身2'],
+  'waist': ['下半身', 'waist', 'lower body', '腰']
+};
+
+init();
+
+function init() {
+  // Create scene
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a1a2e);
+
+  // Create camera
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+  updateCameraPosition();
+
+  // Create renderer
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  document.getElementById("container").appendChild(renderer.domElement);
+
+  // Add lighting
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(10, 20, 15);
+  scene.add(dirLight);
+
+  // Add helpers
+  scene.add(new THREE.GridHelper(20, 20));
+  scene.add(new THREE.AxesHelper(5));
+
+  // Initialize loader
+  loader = new THREE.MMDLoader();
+
+  // Set up input controls
+  setupTouchControls();
+  setupMouseControls();
+  setupKeyboardControls();
+
+  // Load models
+  loadModels();
+
+  // Event listeners
+  window.addEventListener("resize", onWindowResize);
+  document.getElementById("resetView").addEventListener("click", resetView);
+  document.getElementById("toggleWireframe").addEventListener("click", toggleWireframe);
+  document.getElementById("toggleMode").addEventListener("click", toggleControlMode);
+  document.getElementById("toggleBones").addEventListener("click", toggleBoneMode);
+  document.getElementById("reset-bones").addEventListener("click", resetSelectedBone);
+  
+  // Bone transform controls
+  document.getElementById("move-bone").addEventListener("click", () => setBoneTransformMode('move'));
+  document.getElementById("rotate-bone").addEventListener("click", () => setBoneTransformMode('rotate'));
+  document.getElementById("reset-bone-transform").addEventListener("click", resetSelectedBone);
+  
+  // Model selector buttons
+  document.querySelectorAll('.model-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentModel = this.getAttribute('data-model');
+      updateSelectedModel();
+    });
+  });
+
+  // Bone selection buttons
+  document.querySelectorAll('.bone-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (controlMode !== 'bone') return;
+      
+      const boneType = this.getAttribute('data-bone');
+      selectBoneByType(boneType);
+    });
+  });
+
+  // Help overlay
+  document.getElementById('help-btn').addEventListener('click', () => {
+    document.getElementById('help-overlay').style.display = 'block';
+  });
+  
+  document.getElementById('close-help').addEventListener('click', () => {
+    document.getElementById('help-overlay').style.display = 'none';
+  });
+
+  // Mobile gesture help
+  document.getElementById('close-gesture-help').addEventListener('click', () => {
+    document.getElementById('mobile-gesture-info').style.display = 'none';
+  });
+
+  // Show mobile gesture help on first load for mobile devices
+  if (/Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) {
+    setTimeout(() => {
+      document.getElementById('mobile-gesture-info').style.display = 'block';
+    }, 1000);
+  }
+
+  // Start animation loop
+  animate();
+}
+
+function setBoneTransformMode(mode) {
+  boneTransformMode = mode;
+  
+  // Update button states
+  document.getElementById('move-bone').classList.toggle('active', mode === 'move');
+  document.getElementById('rotate-bone').classList.toggle('active', mode === 'rotate');
+  
+  updateSelectedBoneInfo();
+}
+
+function updateSelectedModel() {
+  if (controlMode === 'bone') {
+    const targetModels = getTargetModels();
+    selectedModel = targetModels[0] || null;
+    if (selectedModel && selectedBone) {
+      // Try to maintain selection if possible
+      const boneName = selectedBone.name;
+      const newBone = findBoneInModel(selectedModel, boneName);
+      selectedBone = newBone;
+      updateBoneSelection();
+    }
+  }
+}
+
+function setupBoneHelpers() {
+  // Clear existing helpers
+  boneHelpers.forEach(helper => scene.remove(helper));
+  boneHelpers = [];
+
+  const targetModels = getTargetModels();
+  targetModels.forEach(model => {
+    if (model && model.skeleton) {
+      model.skeleton.bones.forEach(bone => {
+        // Create a small sphere helper for each bone
+        const geometry = new THREE.SphereGeometry(0.15, 12, 12);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: 0x00ff00,
+          transparent: true,
+          opacity: 0.8
+        });
+        const helper = new THREE.Mesh(geometry, material);
+        
+        // Position helper at bone position
+        const worldPos = new THREE.Vector3();
+        bone.getWorldPosition(worldPos);
+        helper.position.copy(worldPos);
+        
+        helper.userData = { bone: bone, model: model };
+        helper.className = 'bone-helper';
+        boneHelpers.push(helper);
+        scene.add(helper);
+      });
+    }
+  });
+}
+
+function findBoneInModel(model, boneName) {
+  if (!model || !model.skeleton) return null;
+  return model.skeleton.bones.find(bone => 
+    bone.name.toLowerCase().includes(boneName.toLowerCase())
+  );
+}
+
+function selectBoneByType(boneType) {
+  if (!selectedModel) return;
+  
+  const possibleNames = boneMappings[boneType];
+  if (!possibleNames) return;
+  
+  for (const name of possibleNames) {
+    const bone = findBoneInModel(selectedModel, name);
+    if (bone) {
+      selectedBone = bone;
+      updateBoneSelection();
+      
+      // Update bone buttons
+      document.querySelectorAll('.bone-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector(`.bone-btn[data-bone="${boneType}"]`).classList.add('active');
+      
+      return;
+    }
+  }
+}
+
+function updateBoneSelection() {
+  updateSelectedBoneInfo();
+  
+  if (selectedBone && selectedModel) {
+    // Highlight the selected bone helper
+    boneHelpers.forEach(helper => {
+      if (helper.userData.bone === selectedBone) {
+        helper.material.color.set(0xff0000);
+        helper.scale.set(1.5, 1.5, 1.5);
+      } else {
+        helper.material.color.set(0x00ff00);
+        helper.scale.set(1, 1, 1);
+      }
+    });
+  } else {
+    // Reset all helpers
+    boneHelpers.forEach(helper => {
+      helper.material.color.set(0x00ff00);
+      helper.scale.set(1, 1, 1);
+    });
+  }
+}
+
+function updateSelectedBoneInfo() {
+  const infoElement = document.getElementById('selected-bone-info');
+  
+  if (selectedBone && selectedModel) {
+    infoElement.textContent = `Selected: ${selectedBone.name} (${boneTransformMode} mode)`;
+    infoElement.style.display = 'block';
+  } else {
+    infoElement.textContent = 'No bone selected';
+    infoElement.style.display = 'block';
+  }
+}
+
+function handleBoneDragStart(event, isTouch = false) {
+  if (controlMode !== 'bone' || !selectedBone) return false;
+  
+  const mouse = new THREE.Vector2();
+  if (isTouch) {
+    mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+  } else {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  }
+  
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+  
+  // Check if we're clicking on the selected bone
+  const intersects = raycaster.intersectObjects(boneHelpers);
+  const hitSelectedBone = intersects.some(intersect => intersect.object.userData.bone === selectedBone);
+  
+  if (hitSelectedBone) {
+    isDraggingBone = true;
+    
+    if (boneTransformMode === 'move') {
+      // Set up drag plane perpendicular to camera view
+      const cameraDirection = new THREE.Vector3();
+      camera.getWorldDirection(cameraDirection);
+      dragPlane.setFromNormalAndCoplanarPoint(cameraDirection, selectedBone.getWorldPosition(new THREE.Vector3()));
+      
+      // Get initial drag point
+      raycaster.ray.intersectPlane(dragPlane, dragStartPoint);
+      dragStartBonePosition.copy(selectedBone.position);
+    } else {
+      // For rotation, store initial rotation
+      dragStartBoneRotation.copy(selectedBone.rotation);
+      dragStartPoint.set(mouse.x, mouse.y, 0);
+    }
+    
+    event.preventDefault();
+    return true;
+  }
+  
+  return false;
+}
+
+function handleBoneDrag(event, isTouch = false) {
+  if (!isDraggingBone || !selectedBone) return;
+  
+  const mouse = new THREE.Vector2();
+  if (isTouch) {
+    mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+  } else {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  }
+  
+  if (boneTransformMode === 'move') {
+    // Move bone
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
+    
+    const dragPoint = new THREE.Vector3();
+    if (raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
+      const delta = new THREE.Vector3().subVectors(dragPoint, dragStartPoint);
+      selectedBone.position.copy(dragStartBonePosition).add(delta);
+    }
+  } else {
+    // Rotate bone
+    const deltaX = mouse.x - dragStartPoint.x;
+    const deltaY = mouse.y - dragStartPoint.y;
+    
+    const rotationSpeed = 2;
+    selectedBone.rotation.x = dragStartBoneRotation.x + deltaY * rotationSpeed;
+    selectedBone.rotation.y = dragStartBoneRotation.y + deltaX * rotationSpeed;
+  }
+  
+  // Update skeleton
+  if (selectedModel) {
+    selectedModel.skeleton.pose();
+    selectedModel.updateMatrixWorld(true);
+  }
+  
+  // Update bone helpers position
+  updateBoneHelpers();
+  
+  event.preventDefault();
+}
+
+function handleBoneDragEnd() {
+  isDraggingBone = false;
+}
+
+function handleBoneSelection(e) {
+  const touch = e.touches[0];
+  const mouse = new THREE.Vector2();
+  mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+
+  const intersects = raycaster.intersectObjects(boneHelpers);
+  if (intersects.length > 0) {
+    selectedBone = intersects[0].object.userData.bone;
+    selectedModel = intersects[0].object.userData.model;
+    updateBoneSelection();
+    updateBoneButtons();
+  }
+}
+
+function handleBoneEditing() {
+  if (!selectedBone || controlMode !== 'bone') return;
+
+  const moveSpeed = 0.05;
+  const rotationSpeed = 0.03;
+
+  // Bone movement
+  if (keys['w']) selectedBone.position.z -= moveSpeed;
+  if (keys['s']) selectedBone.position.z += moveSpeed;
+  if (keys['a']) selectedBone.position.x -= moveSpeed;
+  if (keys['d']) selectedBone.position.x += moveSpeed;
+  if (keys['q']) selectedBone.position.y += moveSpeed;
+  if (keys['e']) selectedBone.position.y -= moveSpeed;
+
+  // Bone rotation
+  if (keys['arrowup']) selectedBone.rotation.x -= rotationSpeed;
+  if (keys['arrowdown']) selectedBone.rotation.x += rotationSpeed;
+  if (keys['arrowleft']) selectedBone.rotation.y += rotationSpeed;
+  if (keys['arrowright']) selectedBone.rotation.y -= rotationSpeed;
+
+  // Update skeleton
+  if (selectedModel) {
+    selectedModel.skeleton.pose();
+    selectedModel.updateMatrixWorld(true);
+  }
+
+  // Update bone helpers position
+  updateBoneHelpers();
+}
+
+function updateBoneHelpers() {
+  boneHelpers.forEach(helper => {
+    const bone = helper.userData.bone;
+    const worldPos = new THREE.Vector3();
+    bone.getWorldPosition(worldPos);
+    helper.position.copy(worldPos);
+  });
+}
+
+function resetSelectedBone() {
+  if (selectedBone) {
+    selectedBone.position.set(0, 0, 0);
+    selectedBone.rotation.set(0, 0, 0);
+    selectedBone.scale.set(1, 1, 1);
+    
+    if (selectedModel) {
+      selectedModel.skeleton.pose();
+      selectedModel.updateMatrixWorld(true);
+    }
+    
+    updateBoneHelpers();
+  }
+}
+
+function updateCameraPosition() {
+  const spherical = new THREE.Spherical(cameraDistance, cameraPhi, cameraTheta);
+  const position = new THREE.Vector3();
+  position.setFromSpherical(spherical);
+  position.add(cameraTarget);
+  
+  camera.position.copy(position);
+  camera.lookAt(cameraTarget);
+}
+
+function setupTouchControls() {
+  const container = document.getElementById('container');
+  const gestureHelp = document.getElementById('gesture-help');
+
+  container.addEventListener('touchstart', function(e) {
+    const now = Date.now();
+    const isDoubleTap = (now - touchState.lastTapTime) < 300;
+    touchState.lastTapTime = now;
+
+    // Show gesture help
+    gestureHelp.style.display = 'block';
+    setTimeout(() => gestureHelp.style.display = 'none', 2000);
+
+    if (e.touches.length === 1) {
+      // Single touch
+      const touch = e.touches[0];
+      const mouse = new THREE.Vector2();
+      mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+
+      // Check if we're touching a model
+      const targetModels = getTargetModels();
+      let hitModel = false;
+      
+      for (const model of targetModels) {
+        if (!model) continue;
+        
+        const intersects = raycaster.intersectObject(model, true);
+        if (intersects.length > 0) {
+          hitModel = true;
+          break;
+        }
+      }
+
+      if (hitModel && controlMode === 'model') {
+        // Touching a model - prepare for movement
+        touchState.isTouchingModel = true;
+        isMovingModel = true;
+        moveStartX = touch.clientX;
+        moveStartY = touch.clientY;
+      } else if (controlMode === 'bone' && isDoubleTap) {
+        // Double tap to select bone
+        handleBoneSelection(e);
+        e.preventDefault();
+        return;
+      } else {
+        // Touching empty space - prepare for rotation/camera
+        touchState.isTouchingModel = false;
+        isRotating = true;
+        rotateStartX = touch.clientX;
+        rotateStartY = touch.clientY;
+        
+        // Start long press timer for bone dragging
+        if (controlMode === 'bone') {
+          touchState.longPressTimer = setTimeout(() => {
+            touchState.isLongPress = true;
+            if (handleBoneDragStart(e, true)) {
+              e.preventDefault();
+              return;
+            }
+          }, 500);
+        }
+      }
+
+    } else if (e.touches.length === 2) {
+      // Two touches - camera controls
+      touchState.isTwoFinger = true;
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      
+      // Calculate initial distance for pinch zoom
+      touchState.initialDistance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      
+      // Calculate initial midpoint for panning
+      touchState.initialPan.x = (touch1.clientX + touch2.clientX) / 2;
+      touchState.initialPan.y = (touch1.clientY + touch2.clientY) / 2;
+      
+      panStartX = touchState.initialPan.x;
+      panStartY = touchState.initialPan.y;
+    }
+    
+    e.preventDefault();
+  });
+
+  container.addEventListener('touchmove', function(e) {
+    // Handle bone dragging first
+    if (controlMode === 'bone' && isDraggingBone) {
+      handleBoneDrag(e, true);
+      return;
+    }
+
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      
+      if (touchState.isTouchingModel && controlMode === 'model' && isMovingModel) {
+        // Move models when touching them
+        const deltaX = touch.clientX - moveStartX;
+        const deltaY = touch.clientY - moveStartY;
+
+        const moveSpeed = 0.05;
+        const targetModels = getTargetModels();
+        targetModels.forEach(model => {
+          if (model) {
+            model.position.x += deltaX * moveSpeed;
+            model.position.y -= deltaY * moveSpeed; // Invert Y for intuitive control
+          }
+        });
+
+        moveStartX = touch.clientX;
+        moveStartY = touch.clientY;
+      } else if (isRotating) {
+        // Rotate models or orbit camera when touching empty space
+        const deltaX = touch.clientX - rotateStartX;
+        const deltaY = touch.clientY - rotateStartY;
+
+        if (controlMode === 'model') {
+          // Rotate models
+          const rotationSpeed = 0.01;
+          const targetModels = getTargetModels();
+          targetModels.forEach(model => {
+            if (model) {
+              model.rotation.y += deltaX * rotationSpeed;
+              model.rotation.x += deltaY * rotationSpeed;
+            }
+          });
+        } else if (controlMode === 'camera') {
+          // Orbit camera
+          const orbitSpeed = 0.01;
+          cameraTheta -= deltaX * orbitSpeed;
+          cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraPhi + deltaY * orbitSpeed));
+          updateCameraPosition();
+        }
+
+        rotateStartX = touch.clientX;
+        rotateStartY = touch.clientY;
+      }
+    } else if (e.touches.length === 2 && touchState.isTwoFinger) {
+      // Two finger gestures for camera control
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+
+      // Pinch zoom
+      const currentDistance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      const zoomDelta = (touchState.initialDistance - currentDistance) * 0.01;
+      cameraDistance = Math.max(5, Math.min(100, cameraDistance + zoomDelta));
+      touchState.initialDistance = currentDistance;
+
+      // Two-finger pan
+      const midX = (touch1.clientX + touch2.clientX) / 2;
+      const midY = (touch1.clientY + touch2.clientY) / 2;
+      const deltaX = midX - panStartX;
+      const deltaY = midY - panStartY;
+
+      const panSpeed = 0.005;
+      const panVector = new THREE.Vector3(-deltaX, deltaY, 0).multiplyScalar(panSpeed);
+      panVector.applyQuaternion(camera.quaternion);
+      cameraTarget.add(panVector);
+
+      panStartX = midX;
+      panStartY = midY;
+
+      updateCameraPosition();
+    }
+
+    e.preventDefault();
+  });
+
+  container.addEventListener('touchend', function(e) {
+    // Clear long press timer
+    if (touchState.longPressTimer) {
+      clearTimeout(touchState.longPressTimer);
+      touchState.longPressTimer = null;
+    }
+
+    if (controlMode === 'bone') {
+      handleBoneDragEnd();
+      touchState.isLongPress = false;
+    }
+
+    isMovingModel = false;
+    isRotating = false;
+    touchState.isTouchingModel = false;
+    
+    if (e.touches.length < 2) {
+      touchState.isTwoFinger = false;
+    }
+  });
+}
+
+function setupMouseControls() {
+  const container = document.getElementById('container');
+  let isMouseDown = false;
+  let isRightClick = false;
+  let isMiddleClick = false;
+  let lastMouseX = 0;
+  let lastMouseY = 0;
+
+  container.addEventListener('mousedown', function(e) {
+    isMouseDown = true;
+    isRightClick = e.button === 2;
+    isMiddleClick = e.button === 1;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    
+    // Check if clicking on a model
+    const mouse = new THREE.Vector2();
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
+
+    // Check if we're clicking on a model
+    const targetModels = getTargetModels();
+    let hitModel = false;
+    
+    for (const model of targetModels) {
+      if (!model) continue;
+      
+      const intersects = raycaster.intersectObject(model, true);
+      if (intersects.length > 0) {
+        hitModel = true;
+        break;
+      }
+    }
+
+    if (hitModel && controlMode === 'model' && e.button === 0) {
+      // Clicking on a model - prepare for movement
+      isMovingModel = true;
+      moveStartX = e.clientX;
+      moveStartY = e.clientY;
+    } else {
+      // Bone selection and dragging in bone mode
+      if (controlMode === 'bone') {
+        if (handleBoneDragStart(e, false)) {
+          return;
+        }
+        
+        // Bone selection
+        if (e.button === 0) {
+          const intersects = raycaster.intersectObjects(boneHelpers);
+          if (intersects.length > 0) {
+            selectedBone = intersects[0].object.userData.bone;
+            selectedModel = intersects[0].object.userData.model;
+            updateBoneSelection();
+            
+            // Update bone buttons based on selected bone
+            updateBoneButtons();
+          }
+        }
+      }
+
+      // Prepare for rotation/camera
+      isRotating = true;
+      rotateStartX = e.clientX;
+      rotateStartY = e.clientY;
+    }
+    
+    e.preventDefault();
+  });
+
+  container.addEventListener('mousemove', function(e) {
+    if (controlMode === 'bone' && isDraggingBone) {
+      handleBoneDrag(e, false);
+      return;
+    }
+    
+    if (!isMouseDown) return;
+
+    const deltaX = e.clientX - lastMouseX;
+    const deltaY = e.clientY - lastMouseY;
+    
+    if (isMovingModel && controlMode === 'model') {
+      // Move models
+      const moveSpeed = 0.02;
+      const targetModels = getTargetModels();
+      targetModels.forEach(model => {
+        if (model) {
+          model.position.x += deltaX * moveSpeed;
+          model.position.y -= deltaY * moveSpeed;
+        }
+      });
+    } else if (isRotating) {
+      if (controlMode === 'model') {
+        // Model control mode - rotate models
+        const targetModels = getTargetModels();
+        
+        if (isMiddleClick) {
+          // Middle click pan camera
+          const panSpeed = 0.01;
+          const panVector = new THREE.Vector3(-deltaX, deltaY, 0).multiplyScalar(panSpeed);
+          panVector.applyQuaternion(camera.quaternion);
+          cameraTarget.add(panVector);
+          updateCameraPosition();
+        } else if (isRightClick) {
+          // Right click move models
+          const moveSpeed = 0.02;
+          targetModels.forEach(model => {
+            if (model) {
+              model.position.x += deltaX * moveSpeed;
+              model.position.y -= deltaY * moveSpeed;
+            }
+          });
+        } else {
+          // Left click rotate models
+          const rotationSpeed = 0.01;
+          targetModels.forEach(model => {
+            if (model) {
+              model.rotation.y += deltaX * rotationSpeed;
+              model.rotation.x += deltaY * rotationSpeed;
+            }
+          });
+        }
+      } else if (controlMode === 'camera') {
+        // Camera control mode
+        if (isRightClick || isMiddleClick) {
+          // Right/middle click pan camera
+          const panSpeed = 0.01;
+          const panVector = new THREE.Vector3(-deltaX, deltaY, 0).multiplyScalar(panSpeed);
+          panVector.applyQuaternion(camera.quaternion);
+          cameraTarget.add(panVector);
+          updateCameraPosition();
+        } else {
+          // Left click orbit camera
+          const orbitSpeed = 0.01;
+          cameraTheta -= deltaX * orbitSpeed;
+          cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraPhi + deltaY * orbitSpeed));
+          updateCameraPosition();
+        }
+      }
+    }
+    
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+  });
+
+  container.addEventListener('mouseup', function() {
+    isMouseDown = false;
+    isMovingModel = false;
+    isRotating = false;
+    if (controlMode === 'bone') {
+      handleBoneDragEnd();
+    }
+  });
+
+  container.addEventListener('wheel', function(e) {
+    if (controlMode !== 'bone') {
+      // Zoom camera with mouse wheel (not in bone mode)
+      const zoomSpeed = 0.5;
+      cameraDistance = Math.max(5, Math.min(100, cameraDistance + e.deltaY * 0.01 * zoomSpeed));
+      updateCameraPosition();
+      e.preventDefault();
+    }
+  });
+
+  // Prevent context menu on right click
+  container.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+  });
+}
+
+function updateBoneButtons() {
+  if (!selectedBone) return;
+  
+  const boneName = selectedBone.name.toLowerCase();
+  document.querySelectorAll('.bone-btn').forEach(btn => {
+    btn.classList.remove('active');
+    const boneType = btn.getAttribute('data-bone');
+    const possibleNames = boneMappings[boneType];
+    
+    if (possibleNames && possibleNames.some(name => boneName.includes(name.toLowerCase()))) {
+      btn.classList.add('active');
+    }
+  });
+}
+
+function setupKeyboardControls() {
+  document.addEventListener('keydown', function(e) {
+    keys[e.key.toLowerCase()] = true;
+    
+    // Quick actions
+    switch(e.key.toLowerCase()) {
+      case 'r':
+        if (controlMode === 'bone') {
+          resetSelectedBone();
+        } else {
+          resetView();
+        }
+        break;
+      case 'f':
+        toggleWireframe();
+        break;
+      case 'h':
+        document.getElementById('help-overlay').style.display = 
+          document.getElementById('help-overlay').style.display === 'block' ? 'none' : 'block';
+        break;
+      case 'c':
+        if (controlMode !== 'bone') toggleControlMode();
+        break;
+      case 'b':
+        toggleBoneMode();
+        break;
+      case '1':
+        selectModel('both');
+        break;
+      case '2':
+        selectModel('model1');
+        break;
+      case '3':
+        selectModel('model2');
+        break;
+    }
+  });
+
+  document.addEventListener('keyup', function(e) {
+    keys[e.key.toLowerCase()] = false;
+  });
+}
+
+function handleKeyboardInput() {
+  if (controlMode === 'bone') {
+    handleBoneEditing();
+    return;
+  }
+  
+  const moveSpeed = 0.1;
+  const rotationSpeed = 0.03;
+  
+  if (controlMode === 'model') {
+    // Model control mode
+    const targetModels = getTargetModels();
+
+    // WASD movement
+    if (keys['w']) {
+      targetModels.forEach(model => {
+        if (model) model.position.z -= moveSpeed;
+      });
+    }
+    if (keys['s']) {
+      targetModels.forEach(model => {
+        if (model) model.position.z += moveSpeed;
+      });
+    }
+    if (keys['a']) {
+      targetModels.forEach(model => {
+        if (model) model.position.x -= moveSpeed;
+      });
+    }
+    if (keys['d']) {
+      targetModels.forEach(model => {
+        if (model) model.position.x += moveSpeed;
+      });
+    }
+
+    // Q/E for vertical movement
+    if (keys['q']) {
+      targetModels.forEach(model => {
+        if (model) model.position.y += moveSpeed;
+      });
+    }
+    if (keys['e']) {
+      targetModels.forEach(model => {
+        if (model) model.position.y -= moveSpeed;
+      });
+    }
+
+    // Arrow key rotation
+    if (keys['arrowup']) {
+      targetModels.forEach(model => {
+        if (model) model.rotation.x -= rotationSpeed;
+      });
+    }
+    if (keys['arrowdown']) {
+      targetModels.forEach(model => {
+        if (model) model.rotation.x += rotationSpeed;
+      });
+    }
+    if (keys['arrowleft']) {
+      targetModels.forEach(model => {
+        if (model) model.rotation.y += rotationSpeed;
+      });
+    }
+    if (keys['arrowright']) {
+      targetModels.forEach(model => {
+        if (model) model.rotation.y -= rotationSpeed;
+      });
+    }
+  } else if (controlMode === 'camera') {
+    // Camera control mode
+    // WASD for camera panning
+    if (keys['w']) {
+      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      cameraTarget.add(forward.multiplyScalar(moveSpeed));
+      updateCameraPosition();
+    }
+    if (keys['s']) {
+      const backward = new THREE.Vector3(0, 0, 1).applyQuaternion(camera.quaternion);
+      cameraTarget.add(backward.multiplyScalar(moveSpeed));
+      updateCameraPosition();
+    }
+    if (keys['a']) {
+      const left = new THREE.Vector3(-1, 0, 0).applyQuaternion(camera.quaternion);
+      cameraTarget.add(left.multiplyScalar(moveSpeed));
+      updateCameraPosition();
+    }
+    if (keys['d']) {
+      const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+      cameraTarget.add(right.multiplyScalar(moveSpeed));
+      updateCameraPosition();
+    }
+
+    // Q/E for vertical camera movement
+    if (keys['q']) {
+      cameraTarget.y += moveSpeed;
+      updateCameraPosition();
+    }
+    if (keys['e']) {
+      cameraTarget.y -= moveSpeed;
+      updateCameraPosition();
+    }
+
+    // Arrow keys for camera orbiting
+    if (keys['arrowup']) {
+      cameraPhi = Math.max(0.1, cameraPhi - rotationSpeed);
+      updateCameraPosition();
+    }
+    if (keys['arrowdown']) {
+      cameraPhi = Math.min(Math.PI - 0.1, cameraPhi + rotationSpeed);
+      updateCameraPosition();
+    }
+    if (keys['arrowleft']) {
+      cameraTheta += rotationSpeed;
+      updateCameraPosition();
+    }
+    if (keys['arrowright']) {
+      cameraTheta -= rotationSpeed;
+      updateCameraPosition();
+    }
+  }
+}
+
+function toggleControlMode() {
+  if (controlMode === 'bone') return; // Can't switch from bone mode directly
+  
+  controlMode = controlMode === 'model' ? 'camera' : 'model';
+  updateModeUI();
+}
+
+function toggleBoneMode() {
+  if (controlMode === 'bone') {
+    // Exit bone mode
+    controlMode = 'model';
+    document.getElementById('bone-controls').style.display = 'none';
+    document.getElementById('selected-bone-info').style.display = 'none';
+    document.getElementById('bone-transform-controls').style.display = 'none';
+    
+    // Remove bone helpers
+    boneHelpers.forEach(helper => scene.remove(helper));
+    boneHelpers = [];
+    selectedBone = null;
+    selectedModel = null;
+  } else {
+    // Enter bone mode
+    controlMode = 'bone';
+    document.getElementById('bone-controls').style.display = 'flex';
+    document.getElementById('bone-transform-controls').style.display = 'flex';
+    
+    // Set initial selected model
+    const targetModels = getTargetModels();
+    selectedModel = targetModels[0] || null;
+    
+    // Create bone helpers
+    setupBoneHelpers();
+    
+    // Set default transform mode
+    setBoneTransformMode('move');
+  }
+  updateModeUI();
+}
+
+function updateModeUI() {
+  const modeBtn = document.getElementById('toggleMode');
+  const boneBtn = document.getElementById('toggleBones');
+  const modeIndicator = document.getElementById('mode-indicator');
+  
+  if (controlMode === 'camera') {
+    modeBtn.textContent = 'Model Mode';
+    modeBtn.classList.add('active');
+    boneBtn.textContent = 'Bone Mode';
+    boneBtn.classList.remove('active');
+    modeIndicator.textContent = 'Mode: Camera Control';
+  } else if (controlMode === 'model') {
+    modeBtn.textContent = 'Camera Mode';
+    modeBtn.classList.remove('active');
+    boneBtn.textContent = 'Bone Mode';
+    boneBtn.classList.remove('active');
+    modeIndicator.textContent = 'Mode: Model Control';
+  } else if (controlMode === 'bone') {
+    modeBtn.textContent = 'Camera Mode';
+    modeBtn.classList.remove('active');
+    boneBtn.textContent = 'Exit Bones';
+    boneBtn.classList.add('active');
+    modeIndicator.textContent = 'Mode: Bone Editing';
+  }
+}
+
+function selectModel(model) {
+  currentModel = model;
+  document.querySelectorAll('.model-btn').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.getAttribute('data-model') === model) {
+      btn.classList.add('active');
+    }
+  });
+  updateSelectedModel();
+}
+
+function getTargetModels() {
+  switch(currentModel) {
+    case 'model1': return [model1];
+    case 'model2': return [model2];
+    default: return [model1, model2];
+  }
+}
+
+function resolveAssetPath(assetPath, defaultBase) {
+  if (!assetPath) return null;
+  assetPath = assetPath.trim();
+  if (/^(https?:|file:|\/)/i.test(assetPath)) return assetPath;
+  if (/^(\.\/|\.\.\/)/.test(assetPath)) return assetPath;
+  if (/^vpd\//i.test(assetPath)) return "./" + assetPath;
+  return (defaultBase || "./pmx/pronama/") + assetPath;
+}
+
+function loadModels() {
+  if (pmxPath1) {
+    const full1 = resolveAssetPath(pmxPath1, "./pmx/pronama/");
+    loader.load(full1, object => {
+      model1 = object;
+      model1.position.set(-5, 0, 0);
+      scene.add(model1);
+      if (vpdPath1) loadAndApplyVPD(model1, resolveAssetPath(vpdPath1, "./"));
+      updateModelInfo();
+      checkLoadingComplete();
+    }, xhr => console.log("PMX1:", (xhr.loaded / xhr.total * 100).toFixed(1) + "%"),
+    err => console.error("Error loading PMX1", err));
+  }
+
+  if (pmxPath2) {
+    const full2 = resolveAssetPath(pmxPath2, "./pmx/pronama/");
+    loader.load(full2, object => {
+      model2 = object;
+      model2.position.set(5, 0, 0);
+      scene.add(model2);
+      if (vpdPath2) loadAndApplyVPD(model2, resolveAssetPath(vpdPath2, "./"));
+      updateModelInfo();
+      checkLoadingComplete();
+    }, xhr => console.log("PMX2:", (xhr.loaded / xhr.total * 100).toFixed(1) + "%"),
+    err => console.error("Error loading PMX2", err));
+  }
+
+  if (!pmxPath1 && !pmxPath2) {
+    document.getElementById("loading").textContent =
+      "No PMX models specified. Example: ?pmx=YusakuFujiki/yusaku.pmx&vpd=vpd/03.vpd";
+  }
+}
+
+function loadAndApplyVPD(model, vpdPath) {
+  fetch(vpdPath)
+    .then(resp => resp.arrayBuffer())
+    .then(buffer => {
+      const text = new TextDecoder("shift_jis").decode(buffer);
+      const parser = new MMDParser.Parser();
+      const vpd = parser.parseVpd(text, false); // left-to-right bones = false
+
+      // Wait a frame to ensure skeleton is initialized
+      requestAnimationFrame(() => applyPoseToModel(model, vpd));
+    })
+    .catch(err => console.error("VPD load/apply error:", err));
+}
+
+function applyPoseToModel(model, vpd) {
+  if (!vpd || !vpd.bones) return;
+  if (!model.skeleton || !model.skeleton.bones) {
+    console.warn("Skeleton not ready yet");
+    return;
+  }
+
+  const boneMap = {};
+  model.skeleton.bones.forEach(b => boneMap[b.name] = b);
+
+  for (const name in vpd.bones) {
+    const data = vpd.bones[name];
+    const bone = boneMap[name];
+    if (!bone) continue;
+    bone.position.fromArray(data.translation);
+    bone.quaternion.fromArray(data.rotation);
+  }
+
+  model.skeleton.pose(); // update matrices
+  model.updateMatrixWorld(true);
+  console.log("Pose applied via MMDParser:", vpd.metadata.modelName || "unknown");
+}
+
+function updateModelInfo() {
+  let info = "";
+  if (model1) info += "Model 1 loaded" + (vpdPath1 ? " + Pose 1" : "") + "<br>";
+  if (model2) info += "Model 2 loaded" + (vpdPath2 ? " + Pose 2" : "") + "<br>";
+  document.getElementById("modelInfo").innerHTML = info;
+}
+
+function checkLoadingComplete() {
+  const total = [pmxPath1, pmxPath2].filter(Boolean).length;
+  const loaded = [model1, model2].filter(Boolean).length;
+  if (loaded === total) document.getElementById("loading").style.display = "none";
+}
+
+function resetView() {
+  cameraTarget.set(0, 0, 0);
+  cameraDistance = 25;
+  cameraPhi = Math.PI / 6;
+  cameraTheta = 0;
+  updateCameraPosition();
+  
+  // Reset model positions and rotations
+  if (model1) {
+    model1.position.set(-5, 0, 0);
+    model1.rotation.set(0, 0, 0);
+  }
+  if (model2) {
+    model2.position.set(5, 0, 0);
+    model2.rotation.set(0, 0, 0);
+  }
+}
+
+function toggleWireframe() {
+  [model1, model2].forEach(model => {
+    if (!model) return;
+    model.traverse(c => {
+      if (c.isMesh) {
+        if (Array.isArray(c.material)) {
+          c.material.forEach(m => m.wireframe = !m.wireframe);
+        } else {
+          c.material.wireframe = !c.material.wireframe;
+        }
+      }
+    });
+  });
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  
+  // Handle continuous keyboard input
+  handleKeyboardInput();
+  
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>
