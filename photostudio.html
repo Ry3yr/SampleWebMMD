@@ -6,6 +6,8 @@
 <title>PMX + VPD Viewer (Mobile Optimized)</title>
 <script src="./libs/three.js"></script>
 <script src="./libs/mmdparser.min.js"></script>
+<script src="./libs/MMDAnimationHelper.js"></script>
+<script src="./libs/CCDIKSolver.js"></script> <!-- REQUIRED -->
 <script src="./libs/ammo.min.js"></script>
 <script src="./libs/TGALoader.js"></script>
 <script src="./libs/MMDLoader.js"></script>
@@ -585,6 +587,7 @@ const boneMappings = {
 init();
 
 function init() {
+  helper = new THREE.MMDAnimationHelper();
   // Create scene
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1a2e);
@@ -1083,7 +1086,7 @@ function setupTouchControls() {
         targetModels.forEach(model => {
           if (model) {
             model.position.x += deltaX * moveSpeed;
-            model.position.y -= deltaY * moveSpeed; // Invert Y for intuitive control
+            model.position.z -= deltaY * moveSpeed; // Invert Y for intuitive control
           }
         });
 
@@ -1261,7 +1264,7 @@ function setupMouseControls() {
       targetModels.forEach(model => {
         if (model) {
           model.position.x += deltaX * moveSpeed;
-          model.position.y -= deltaY * moveSpeed;
+          model.position.z -= deltaY * moveSpeed;
         }
       });
     } else if (isRotating) {
@@ -1650,17 +1653,33 @@ function loadModels() {
 }
 
 function loadAndApplyVPD(model, vpdPath) {
-  fetch(vpdPath)
-    .then(resp => resp.arrayBuffer())
-    .then(buffer => {
-      const text = new TextDecoder("shift_jis").decode(buffer);
-      const parser = new MMDParser.Parser();
-      const vpd = parser.parseVpd(text, false); // left-to-right bones = false
-
+  console.log("Loading VPD:", vpdPath);
+  
+  // Use MMDLoader's built-in VPD loading with MMDAnimationHelper
+  loader.loadVPD(
+    vpdPath,
+    false, // left-to-right bones = false
+    function(vpd) {
+      console.log("VPD loaded successfully:", vpd);
+      
       // Wait a frame to ensure skeleton is initialized
-      requestAnimationFrame(() => applyPoseToModel(model, vpd));
-    })
-    .catch(err => console.error("VPD load/apply error:", err));
+      requestAnimationFrame(() => {
+        try {
+          // Apply pose using MMDAnimationHelper's pose method
+          helper.pose(model, vpd);
+          console.log("Pose applied successfully to model");
+        } catch (error) {
+          console.error("Error applying pose:", error);
+        }
+      });
+    },
+    function(xhr) {
+      console.log("VPD loading: " + (xhr.loaded / xhr.total * 100).toFixed(1) + "%");
+    },
+    function(error) {
+      console.error("Error loading VPD:", error);
+    }
+  );
 }
 
 function applyPoseToModel(model, vpd) {
