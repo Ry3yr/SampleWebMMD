@@ -6,6 +6,7 @@ Animated Stage example: https://ry3yr.github.io/SampleWebMMD/?stage=/livestagecl
 A video can be seen here
 https://m.youtube.com/watch?v=0n8qi34uMjQ&list=PLBva3abEZvyT-_ajETBGeOCGBA_AFBT5Z&index=18&pp=iAQB
 
+2025/10/29 Added Pose Studio https://ry3yr.github.io/SampleWebMMD/photostudio.html?pmx=AoiZaizen/AoiZaizen.pmx&pmx2=AoiZaizen/AoiZaizen.pmx
 ______________________
 
 Special Notes:
@@ -29,3 +30,4 @@ Perhaps people porting those should consider this when porting models,
 to wide usecase of their model output.
 
 2024/12/8 BoneMorphs can be converted to Blendshape Pures quite easily in PMXE actually: https://www.youtube.com/watch?v=If6KQASKFV4#https://i.ibb.co/C9mLz13/Screenshot-2024-12-08-08-25-38.jpg
+
