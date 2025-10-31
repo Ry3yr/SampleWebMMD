@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1715,7 +1717,87 @@ function updateModelInfo() {
 function checkLoadingComplete() {
   const total = [pmxPath1, pmxPath2].filter(Boolean).length;
   const loaded = [model1, model2].filter(Boolean).length;
-  if (loaded === total) document.getElementById("loading").style.display = "none";
+  if (loaded === total) {
+    document.getElementById("loading").style.display = "none";
+    
+    // Apply stored poses if no VPD files are specified
+    if (!vpdPath1 && !vpdPath2) {
+      setTimeout(() => {
+        applyStoredPosesOnLoad();
+      }, 500);
+    }
+  }
+}
+
+// Add this new function to apply stored poses
+function applyStoredPosesOnLoad() {
+  console.log("Checking for stored poses...");
+  
+  // Apply stored pose 1 to model1 if available
+  const storedPose1 = localStorage.getItem('stor1');
+  if (storedPose1 && model1) {
+    console.log('Applying stored pose 1 to model1');
+    try {
+      const pose = JSON.parse(storedPose1);
+      applyPoseToModelFromStorage(model1, pose);
+      console.log('Stored pose 1 applied successfully');
+    } catch (error) {
+      console.error('Error applying stored pose 1:', error);
+    }
+  } else {
+    console.log('No stored pose 1 found or model1 not available');
+  }
+  
+  // Apply stored pose 2 to model2 if available
+  const storedPose2 = localStorage.getItem('stor2');
+  if (storedPose2 && model2) {
+    console.log('Applying stored pose 2 to model2');
+    try {
+      const pose = JSON.parse(storedPose2);
+      applyPoseToModelFromStorage(model2, pose);
+      console.log('Stored pose 2 applied successfully');
+    } catch (error) {
+      console.error('Error applying stored pose 2:', error);
+    }
+  } else {
+    console.log('No stored pose 2 found or model2 not available');
+  }
+}
+
+// Add this function to apply pose from storage
+function applyPoseToModelFromStorage(model, pose) {
+  if (!model || !model.skeleton || !pose) {
+    console.log("Cannot apply pose - missing model, skeleton, or pose data");
+    return;
+  }
+  
+  console.log("Applying pose to model with", Object.keys(pose).length, "bones");
+  
+  model.updateMatrixWorld(true);
+  
+  let bonesApplied = 0;
+  Object.keys(pose).forEach(japaneseName => {
+    const bone = model.skeleton.bones.find(b => b.name === japaneseName);
+    if (!bone || !pose[japaneseName]) {
+      console.log("Bone not found:", japaneseName);
+      return;
+    }
+
+    const relQuat = new THREE.Quaternion(
+      pose[japaneseName].quaternion.x,
+      pose[japaneseName].quaternion.y,
+      pose[japaneseName].quaternion.z,
+      pose[japaneseName].quaternion.w
+    );
+
+    // Apply the relative rotation to the bone
+    bone.quaternion.copy(relQuat).normalize();
+    bonesApplied++;
+  });
+
+  console.log("Applied rotations to", bonesApplied, "bones");
+  model.skeleton.update();
+  model.updateMatrixWorld(true);
 }
 
 function resetView() {
