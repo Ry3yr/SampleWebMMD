@@ -737,6 +737,18 @@ function generateState() {
     params.set('m2', m2State);
   }
   
+  // Add stored poses to URL if they exist
+  const storedPose1 = localStorage.getItem('stor1');
+  const storedPose2 = localStorage.getItem('stor2');
+  
+  if (storedPose1) {
+    params.set('stor1', encodeURIComponent(storedPose1));
+  }
+  
+  if (storedPose2) {
+    params.set('stor2', encodeURIComponent(storedPose2));
+  }
+  
   const stateURL = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
   
   // Show URL in textbox
@@ -748,6 +760,7 @@ function generateState() {
   return stateURL;
 }
 
+// Also update the loadStateFromURL function to handle stored poses from URL
 function loadStateFromURL() {
   if (stateCam) {
     const parts = stateCam.split(',');
@@ -759,6 +772,56 @@ function loadStateFromURL() {
       updateCameraPosition();
     }
   }
+  
+  // Load stored poses from URL parameters
+  const urlStor1 = urlParams.get('stor1');
+  const urlStor2 = urlParams.get('stor2');
+  
+  if (urlStor1) {
+    try {
+      const decodedStor1 = decodeURIComponent(urlStor1);
+      // Validate it's valid JSON before storing
+      JSON.parse(decodedStor1);
+      localStorage.setItem('stor1', decodedStor1);
+    } catch (error) {
+      console.error('Invalid stor1 data in URL:', error);
+    }
+  }
+  
+  if (urlStor2) {
+    try {
+      const decodedStor2 = decodeURIComponent(urlStor2);
+      // Validate it's valid JSON before storing
+      JSON.parse(decodedStor2);
+      localStorage.setItem('stor2', decodedStor2);
+    } catch (error) {
+      console.error('Invalid stor2 data in URL:', error);
+    }
+  }
+}
+
+// Update the applyModelStates function to also apply stored poses
+function applyModelStates() {
+  if (stateM1 && model1) {
+    const parts = stateM1.split(',');
+    if (parts.length === 6) {
+      model1.position.set(parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2]));
+      model1.rotation.set(parseFloat(parts[3]), parseFloat(parts[4]), parseFloat(parts[5]));
+    }
+  }
+  
+  if (stateM2 && model2) {
+    const parts = stateM2.split(',');
+    if (parts.length === 6) {
+      model2.position.set(parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2]));
+      model2.rotation.set(parseFloat(parts[3]), parseFloat(parts[4]), parseFloat(parts[5]));
+    }
+  }
+  
+  // Apply stored poses from localStorage (which might have been loaded from URL)
+  setTimeout(() => {
+    applyStoredPosesOnLoad();
+  }, 100);
 }
 
 function applyModelStates() {
