@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>PMX + VPD Viewer</title>
+<script src="./libs/three.js"></script>
+<script src="./libs/mmdparser.min.js"></script>
+<script src="./libs/MMDAnimationHelper.js"></script>
+<script src="./libs/CCDIKSolver.js"></script>
+<script src="./libs/ammo.min.js"></script>
+<script src="./libs/TGALoader.js"></script>
+<script src="./libs/MMDLoader.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;touch-action:none}
+body{overflow:hidden;background:#1a1a2e;color:white;font-family:system-ui;height:100vh;width:100vw}
+#container{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1}
+#loading{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.7);padding:20px 30px;border-radius:10px;z-index:10;text-align:center;font-size:18px}
+#info{position:fixed;top:10px;left:10px;background:rgba(0,0,0,0.7);padding:12px;border-radius:10px;z-index:5;max-width:90%;font-size:14px;line-height:1.4}
+#info h1{font-size:16px;margin-bottom:8px}
+#controls{position:fixed;bottom:20px;left:0;width:100%;display:flex;justify-content:center;gap:15px;z-index:5;padding:0 20px}
+.control-btn{background:rgba(30,30,60,0.8);border:2px solid #4a4a8a;color:white;padding:12px 20px;border-radius:50px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,0.3);transition:all 0.2s;min-width:140px}
+.control-btn:active{background:rgba(60,60,100,0.9);transform:scale(0.95)}
+.control-btn.active{background:rgba(80,80,160,0.9);border-color:#8a8aff}
+#model-selector{position:fixed;top:80px;right:10px;background:rgba(0,0,0,0.7);padding:10px;border-radius:10px;z-index:5;display:flex;flex-direction:column;gap:8px}
+.model-btn{background:rgba(40,40,80,0.8);border:1px solid #5a5aaa;color:white;padding:8px 12px;border-radius:6px;font-size:14px;cursor:pointer}
+.model-btn.active{background:rgba(80,80,160,0.9);border-color:#8a8aff}
+#help-overlay{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);padding:20px;border-radius:10px;z-index:20;max-width:90%;max-height:80%;overflow-y:auto;display:none}
+#help-overlay h2{margin-bottom:15px;text-align:center}
+.help-section{margin-bottom:15px}
+.help-section h3{margin-bottom:8px;color:#8a8aff}
+.help-key{display:inline-block;background:rgba(255,255,255,0.2);padding:2px 6px;border-radius:4px;margin:0 2px;font-family:monospace}
+#close-help{display:block;margin:15px auto 0;padding:8px 20px;background:#4a4a8a;border:none;border-radius:5px;color:white;cursor:pointer}
+#mode-indicator{position:fixed;top:10px;right:60px;background:rgba(0,0,0,0.7);padding:8px 12px;border-radius:6px;z-index:5;font-size:14px}
+#bone-controls{position:fixed;top:150px;left:10px;background:rgba(0,0,0,0.7);padding:10px;border-radius:10px;z-index:5;display:none;flex-direction:column;gap:8px;max-width:200px}
+.bone-section{margin-bottom:10px}
+.bone-section h4{margin-bottom:5px;color:#8a8aff;font-size:12px}
+.bone-btn{background:rgba(60,60,100,0.8);border:1px solid #6a6aaa;color:white;padding:4px 8px;border-radius:4px;font-size:12px;cursor:pointer;margin:2px;width:calc(50% - 4px);display:inline-block;text-align:center}
+.bone-btn.active{background:rgba(100,100,200,0.9);border-color:#8a8aff}
+#selected-bone-info{position:fixed;top:50%;left:10px;background:rgba(0,0,0,0.8);padding:10px;border-radius:10px;z-index:5;font-size:12px;display:none}
+#bone-transform-controls{position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);padding:10px;border-radius:10px;z-index:5;display:none;gap:10px}
+.transform-btn{background:rgba(60,60,100,0.8);border:1px solid #6a6aaa;color:white;padding:8px 12px;border-radius:6px;font-size:14px;cursor:pointer;min-width:80px}
+.transform-btn.active{background:rgba(100,100,200,0.9);border-color:#8a8aff}
+#gesture-help{position:fixed;bottom:180px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);padding:8px 12px;border-radius:6px;z-index:5;font-size:12px;text-align:center;display:none}
+#stored-pose-controls{position:fixed;top:80px;left:10px;background:rgba(0,0,0,0.7);padding:10px;border-radius:10px;z-index:5;display:flex;flex-direction:column;gap:8px;max-width:200px}
+.stored-pose-section{margin-bottom:10px}
+.stored-pose-section h4{margin-bottom:5px;color:#8a8aff;font-size:12px}
+.stored-pose-btn{background:rgba(60,100,60,0.8);border:1px solid #6aaa6a;color:white;padding:6px 10px;border-radius:4px;font-size:12px;cursor:pointer;margin:2px;width:100%;text-align:center}
+.stored-pose-btn:active{background:rgba(80,140,80,0.9);transform:scale(0.95)}
+#state-controls{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);padding:10px;border-radius:10px;z-index:5;display:flex;flex-direction:column;gap:10px;width:90%;max-width:600px}
+.state-btn{background:rgba(100,60,100,0.8);border:1px solid #8a6a8a;color:white;padding:8px 12px;border-radius:6px;font-size:14px;cursor:pointer;min-width:100px}
+.state-btn:active{background:rgba(140,80,140,0.9);transform:scale(0.95)}
+#state-textbox{background:rgba(0,0,0,0.8);border:1px solid #4a4a8a;border-radius:6px;color:white;padding:8px;font-size:12px;font-family:monospace;width:100%;min-height:60px;resize:vertical;display:none}
+#help-btn{position:fixed;top:10px;right:10px;background:rgba(30,30,60,0.8);border:2px solid #4a4a8a;color:white;padding:8px 12px;border-radius:50%;width:40px;height:40px;cursor:pointer;z-index:5;font-size:18px;display:flex;align-items:center;justify-content:center}
+.bone-helper{cursor:pointer;transition:all 0.2s}
+.bone-helper:hover{transform:scale(1.2)}
+#mobile-gesture-info{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);padding:20px;border-radius:10px;z-index:15;text-align:center;display:none;max-width:90%}
+.gesture-item{margin:10px 0;padding:10px;background:rgba(255,255,255,0.1);border-radius:5px}
+#height-controls{position:fixed;bottom:180px;right:10px;background:rgba(0,0,0,0.7);padding:10px;border-radius:10px;z-index:5;display:flex;flex-direction:column;gap:10px}
+.height-btn{background:rgba(60,100,100,0.8);border:1px solid #6aaaaa;color:white;padding:12px 15px;border-radius:50%;font-size:18px;font-weight:bold;cursor:pointer;width:50px;height:50px;display:flex;align-items:center;justify-content:center}
+.height-btn:active{background:rgba(80,140,140,0.9);transform:scale(0.95)}
+/* Light controls */
+#sun-controls{position:fixed;top:80px;right:10px;background:rgba(0,0,0,0.7);padding:10px;border-radius:10px;z-index:5;display:flex;flex-direction:column;gap:10px;min-width:200px}
+.sun-control-section{margin-bottom:10px}
+.sun-control-section h4{margin-bottom:5px;color:#ffcc00;font-size:12px}
+.flood-control-section{margin-bottom:10px}
+.flood-control-section h4{margin-bottom:5px;color:#0088ff;font-size:12px}
+.sun-slider-container{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.sun-slider-container label{font-size:12px;min-width:80px}
+.sun-slider{flex:1;height:6px;background:rgba(255,255,255,0.2);border-radius:3px;outline:none;appearance:none}
+.sun-slider::-webkit-slider-thumb{appearance:none;width:16px;height:16px;border-radius:50%;background:#ffcc00;cursor:pointer;border:2px solid #ffaa00}
+.sun-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#ffcc00;cursor:pointer;border:2px solid #ffaa00}
+.sun-btn{background:rgba(255,204,0,0.2);border:1px solid #ffaa00;color:#ffcc00;padding:6px 10px;border-radius:4px;font-size:12px;cursor:pointer;text-align:center}
+.sun-btn:active{background:rgba(255,204,0,0.4);transform:scale(0.95)}
+.flood-btn{background:rgba(0,136,255,0.2);border:1px solid #0066cc;color:#0088ff;padding:6px 10px;border-radius:4px;font-size:12px;cursor:pointer;text-align:center}
+.flood-btn:active{background:rgba(0,136,255,0.4);transform:scale(0.95)}
+#sun-visualizer{position:absolute;top:10px;right:10px;width:80px;height:80px;pointer-events:none;display:none}
+#flood-visualizer{position:absolute;top:100px;right:10px;width:80px;height:80px;pointer-events:none;display:none}
+.sun-visualizer-canvas{width:100%;height:100%;border-radius:50%;background:rgba(0,0,0,0.3);border:2px solid rgba(255,204,0,0.5)}
+.flood-visualizer-canvas{width:100%;height:100%;border-radius:50%;background:rgba(0,0,0,0.3);border:2px solid rgba(0,136,255,0.5)}
+#sun-intensity-value{font-size:10px;color:#ffcc00;text-align:center;margin-top:5px}
+#flood-intensity-value{font-size:10px;color:#0088ff;text-align:center;margin-top:5px}
+#light-toggle{background:rgba(255,204,0,0.2);border:1px solid #ffaa00;color:#ffcc00;padding:6px 10px;border-radius:4px;font-size:12px;cursor:pointer;text-align:center;width:100%;margin-bottom:10px}
+#light-toggle:active{background:rgba(255,204,0,0.4);transform:scale(0.95)}
+#light-toggle.flood-mode{background:rgba(0,136,255,0.2);border-color:#0066cc;color:#0088ff}
+@media (max-width:480px){#info{font-size:12px;padding:10px}#info h1{font-size:14px}.control-btn{padding:10px 15px;font-size:14px;min-width:120px}#mode-indicator{top:60px;right:10px}#bone-controls{top:120px;max-width:180px}#bone-transform-controls{bottom:100px;flex-wrap:wrap;justify-content:center}.transform-btn{padding:6px 10px;font-size:12px;min-width:70px}#gesture-help{bottom:160px;font-size:11px}#stored-pose-controls{top:60px;max-width:180px}#state-controls{bottom:70px;flex-wrap:wrap;justify-content:center}.state-btn{padding:6px 10px;font-size:12px;min-width:90px}#state-textbox{font-size:11px;min-height:50px}#height-controls{bottom:150px;right:5px;padding:8px}.height-btn{width:45px;height:45px;font-size:16px}#sun-controls{top:60px;right:5px;min-width:180px;padding:8px}.sun-slider-container label{min-width:70px;font-size:11px}.sun-btn,.flood-btn{font-size:11px;padding:5px 8px}#light-toggle{font-size:11px;padding:5px 8px}}
+</style>
+</head>
+<body>
+<div id="container"></div>
+<div id="loading">Loading models...</div>
+<div id="info">
+  <h1>PMX + VPD Viewer</h1>
+  <p>Touch models to move them, empty space to rotate/camera</p>
+  <p id="modelInfo"></p>
+</div>
+
+<div id="mode-indicator">Mode: Model Control</div>
+<button id="help-btn">?</button>
+
+<div id="selected-bone-info">No bone selected</div>
+
+<!-- Sun Visualizer -->
+<div id="sun-visualizer">
+  <canvas class="sun-visualizer-canvas" width="80" height="80"></canvas>
+  <div id="sun-intensity-value">100%</div>
+</div>
+
+<!-- Flood Visualizer -->
+<div id="flood-visualizer">
+  <canvas class="flood-visualizer-canvas" width="80" height="80"></canvas>
+  <div id="flood-intensity-value">100%</div>
+</div>
+
+<!-- Light Controls -->
+<div id="sun-controls">
+  <div class="sun-control-section">
+    <button id="light-toggle" class="light-toggle">Switch to Flood Light</button>
+  </div>
+  
+  <!-- Sun Light Controls -->
+  <div id="sun-controls-panel" class="sun-control-section">
+    <h4>Sun Light Controls</h4>
+    <div class="sun-slider-container">
+      <label>Azimuth:</label>
+      <input type="range" id="sun-azimuth" class="sun-slider" min="0" max="360" value="45" step="1">
+    </div>
+    <div class="sun-slider-container">
+      <label>Elevation:</label>
+      <input type="range" id="sun-elevation" class="sun-slider" min="0" max="90" value="60" step="1">
+    </div>
+    <div class="sun-slider-container">
+      <label>Intensity:</label>
+      <input type="range" id="sun-intensity" class="sun-slider" min="0" max="200" value="100" step="1">
+    </div>
+    <button id="reset-sun" class="sun-btn">Reset Sun Position</button>
+    <button id="toggle-sun" class="sun-btn">Toggle Sun</button>
+    <button id="toggle-sun-visualizer" class="sun-btn">Show Sun Position</button>
+  </div>
+  
+  <!-- Flood Light Controls -->
+  <div id="flood-controls-panel" class="flood-control-section" style="display:none">
+    <h4>Flood Light Controls</h4>
+    <div class="sun-slider-container">
+      <label>Azimuth:</label>
+      <input type="range" id="flood-azimuth" class="sun-slider" min="0" max="360" value="0" step="1">
+    </div>
+    <div class="sun-slider-container">
+      <label>Elevation:</label>
+      <input type="range" id="flood-elevation" class="sun-slider" min="0" max="90" value="45" step="1">
+    </div>
+    <div class="sun-slider-container">
+      <label>Intensity:</label>
+      <input type="range" id="flood-intensity" class="sun-slider" min="0" max="200" value="100" step="1">
+    </div>
+    <div class="sun-slider-container">
+      <label>Distance:</label>
+      <input type="range" id="flood-distance" class="sun-slider" min="10" max="100" value="30" step="1">
+    </div>
+    <button id="reset-flood" class="flood-btn">Reset Flood Position</button>
+    <button id="toggle-flood" class="flood-btn">Toggle Flood</button>
+    <button id="toggle-flood-visualizer" class="flood-btn">Show Flood Position</button>
+  </div>
+</div>
+
+<div id="mobile-gesture-info">
+  <h3>Mobile Gestures Guide</h3>
+  <div class="gesture-item"><strong>Touch Model + Drag:</strong> Move model</div>
+  <div class="gesture-item"><strong>Touch Empty Space + Drag:</strong> Rotate model (Model Mode) / Orbit camera (Camera Mode)</div>
+  <div class="gesture-item"><strong>Two Finger Drag:</strong> Pan camera</div>
+  <div class="gesture-item"><strong>Pinch:</strong> Zoom camera</div>
+  <div class="gesture-item"><strong>Double Tap Bone:</strong> Select bone (Bone Mode)</div>
+  <div class="gesture-item"><strong>Long Press + Drag Bone:</strong> Move bone (Bone Mode)</div>
+  <button id="close-gesture-help" style="margin-top:15px;padding:8px 16px;background:#4a4a8a;color:white;border:none;border-radius:5px;cursor:pointer">Got it!</button>
+</div>
+
+<div id="state-controls">
+  <button id="generate-state" class="state-btn">Generate State URL</button>
+  <textarea id="state-textbox" placeholder="Click 'Generate State URL' to create a shareable URL with current camera and model positions"></textarea>
+</div>
+
+<div id="stored-pose-controls">
+  <div class="stored-pose-section">
+    <h4>Stored Poses</h4>
+    <button id="reload-stor1" class="stored-pose-btn">Reload Pose 1</button>
+    <button id="reload-stor2" class="stored-pose-btn">Reload Pose 2</button>
+    <button id="reload-both" class="stored-pose-btn">Reload Both</button>
+  </div>
+</div>
+
+<div id="bone-controls">
+  <div class="bone-section"><h4>Head & Neck</h4><button class="bone-btn" data-bone="neck">Neck</button><button class="bone-btn" data-bone="head">Head</button></div>
+  <div class="bone-section"><h4>Arms & Hands</h4><button class="bone-btn" data-bone="shoulder_l">Left Shoulder</button><button class="bone-btn" data-bone="shoulder_r">Right Shoulder</button><button class="bone-btn" data-bone="arm_l">Left Arm</button><button class="bone-btn" data-bone="arm_r">Right Arm</button><button class="bone-btn" data-bone="hand_l">Left Hand</button><button class="bone-btn" data-bone="hand_r">Right Hand</button></div>
+  <div class="bone-section"><h4>Legs & Feet</h4><button class="bone-btn" data-bone="leg_l">Left Leg</button><button class="bone-btn" data-bone="leg_r">Right Leg</button><button class="bone-btn" data-bone="knee_l">Left Knee</button><button class="bone-btn" data-bone="knee_r">Right Knee</button><button class="bone-btn" data-bone="foot_l">Left Foot</button><button class="bone-btn" data-bone="foot_r">Right Foot</button></div>
+  <div class="bone-section"><h4>Spine</h4><button class="bone-btn" data-bone="spine">Spine</button><button class="bone-btn" data-bone="waist">Waist</button></div>
+  <button id="reset-bones" class="control-btn" style="margin-top:10px;min-width:auto">Reset Bones</button>
+</div>
+
+<div id="bone-transform-controls">
+  <button id="move-bone" class="transform-btn active">Move</button>
+  <button id="rotate-bone" class="transform-btn">Rotate</button>
+  <button id="reset-bone-transform" class="transform-btn">Reset</button>
+</div>
+
+<div id="height-controls">
+  <button id="move-up" class="height-btn">↑</button>
+  <button id="move-down" class="height-btn">↓</button>
+</div>
+
+<div id="gesture-help"><div> Touch model to move, empty space to rotate</div></div>
+
+<div id="help-overlay">
+  <h2>Controls Guide</h2>
+  <div class="help-section"><h3>Mobile Touch Controls</h3><p><strong>Touch Model + Drag:</strong> Move model</p><p><strong>Touch Empty Space + Drag:</strong> Rotate model (Model Mode) / Orbit camera (Camera Mode)</p><p><strong>Two Finger Drag:</strong> Pan camera</p><p><strong>Pinch:</strong> Zoom camera</p><p><strong>Double Tap Bone:</strong> Select bone (Bone Mode)</p><p><strong>Long Press + Drag Bone:</strong> Move bone (Bone Mode)</p></div>
+  <div class="help-section"><h3>Control Modes</h3><p><span class="help-key">Model Mode</span> - Move and rotate models</p><p><span class="help-key">Camera Mode</span> - Control camera view</p><p><span class="help-key">Bone Mode</span> - Edit individual bone positions</p></div>
+  <div class="help-section"><h3>Bone Editing (Bone Mode Only)</h3><p><span class="help-key">Tap Bone</span> - Select bone</p><p><span class="help-key">Long Press + Drag</span> - Move selected bone</p><p><span class="help-key">Two Finger Rotate</span> - Rotate selected bone</p></div>
+  <div class="help-section"><h3>Light Controls</h3><p><span class="help-key">Switch Light</span> - Toggle between Sun Light and Flood Light</p><p><span class="help-key">Sun Light</span> - Directional light from far away (creates parallel shadows)</p><p><span class="help-key">Flood Light</span> - Directional light from closer distance (creates perspective shadows)</p><p><span class="help-key">Models cast shadows</span> - All models cast shadows on each other and receive shadows</p><p><span class="help-key">Toggle Visualizer</span> - Show/hide light position indicator</p></div>
+  <div class="help-section"><h3>Stored Poses</h3><p><span class="help-key">Reload Pose 1</span> - Re-fetch and apply stor1 to Model 1</p><p><span class="help-key">Reload Pose 2</span> - Re-fetch and apply stor2 to Model 2</p><p><span class="help-key">Reload Both</span> - Re-fetch and apply both poses</p></div>
+  <div class="help-section"><h3>Height Controls</h3><p><span class="help-key">↑ Button</span> - Move selected model(s) up</p><p><span class="help-key">↓ Button</span> - Move selected model(s) down</p></div>
+  <div class="help-section"><h3>State Management</h3><p><span class="help-key">Generate State URL</span> - Create URL with current scene state (camera position, model positions)</p><p><span class="help-key">Text Box</span> - Copy the generated URL manually to share your scene</p></div>
+  <button id="close-help">Close</button>
+</div>
+
+<div id="model-selector">
+  <button class="model-btn active" data-model="both">Both Models</button>
+  <button class="model-btn" data-model="model1">Model 1</button>
+  <button class="model-btn" data-model="model2">Model 2</button>
+</div>
+
+<div id="controls">
+  <button id="toggleMode" class="control-btn">Camera Mode</button>
+  <button id="toggleBones" class="control-btn">Bone Mode</button>
+  <button id="resetView" class="control-btn">Reset View</button>
+  <button id="toggleWireframe" class="control-btn">Wireframe</button>
+</div>
+
+<script>
+// Get URL parameters
+const urlParams = new URLSearchParams(window.location.search);
+const pmxPath1 = urlParams.get("pmx");
+const pmxPath2 = urlParams.get("pmx2");
+const vpdPath1 = urlParams.get("vpd");
+const vpdPath2 = urlParams.get("vpd2");
+
+// State parameters - simple format
+const stateCam = urlParams.get("cam");
+const stateM1 = urlParams.get("m1");
+const stateM2 = urlParams.get("m2");
+
+let scene, camera, renderer;
+let model1, model2;
+let loader;
+
+// Light variables
+let sunLight;
+let floodLight;
+let sunHelper;
+let floodHelper;
+let sunVisualizer;
+let floodVisualizer;
+let sunVisualizerCanvas;
+let sunVisualizerCtx;
+let floodVisualizerCanvas;
+let floodVisualizerCtx;
+
+let sunAzimuth = 45; // degrees, 0=North, 90=East, 180=South, 270=West
+let sunElevation = 60; // degrees, 0=horizon, 90=zenith
+let sunIntensity = 1.0;
+let isSunEnabled = true;
+
+let floodAzimuth = 0;
+let floodElevation = 45;
+let floodIntensity = 1.0;
+let floodDistance = 30;
+let isFloodEnabled = false;
+let isFloodMode = false; // false = sun mode, true = flood mode
+
+// Input control variables
+let isRotating = false;
+let isMovingModel = false;
+let isPanning = false;
+let rotateStartX = 0, rotateStartY = 0;
+let moveStartX = 0, moveStartY = 0;
+let panStartX = 0, panStartY = 0;
+let currentModel = 'both';
+let controlMode = 'model';
+
+// Keyboard state
+const keys = {};
+
+// Camera control variables
+let cameraTarget = new THREE.Vector3(0, 0, 0);
+let cameraDistance = 25;
+let cameraPhi = Math.PI / 6;
+let cameraTheta = 0;
+
+// Touch state
+let touchState = {
+  isTwoFinger: false,
+  initialDistance: 0,
+  initialPan: { x: 0, y: 0 },
+  lastTapTime: 0,
+  isLongPress: false,
+  longPressTimer: null,
+  isTouchingModel: false
+};
+
+// Bone editing variables
+let selectedBone = null;
+let selectedModel = null;
+let boneHelpers = [];
+let isDraggingBone = false;
+let boneTransformMode = 'move';
+let dragPlane = new THREE.Plane();
+let dragStartPoint = new THREE.Vector3();
+let dragStartBonePosition = new THREE.Vector3();
+let dragStartBoneRotation = new THREE.Euler();
+
+const boneMappings = {
+  'neck': ['首', 'neck', 'kubi'],
+  'head': ['頭', 'head', 'atama'],
+  'shoulder_l': ['左肩', 'shoulder_l', 'left shoulder', '左腕１'],
+  'shoulder_r': ['右肩', 'shoulder_r', 'right shoulder', '右腕１'],
+  'arm_l': ['左腕', 'arm_l', 'left arm', '左腕２'],
+  'arm_r': ['右腕', 'arm_r', 'right arm', '右腕２'],
+  'hand_l': ['左手', 'hand_l', 'left hand', '左腕３'],
+  'hand_r': ['右手', 'hand_r', 'right hand', '右腕３'],
+  'leg_l': ['左足', 'leg_l', 'left leg', '左足１'],
+  'leg_r': ['右足', 'leg_r', 'right leg', '右足１'],
+  'knee_l': ['左ひざ', 'knee_l', 'left knee', '左足２'],
+  'knee_r': ['右ひざ', 'knee_r', 'right knee', '右足２'],
+  'foot_l': ['左足首', 'foot_l', 'left foot', '左足３'],
+  'foot_r': ['右足首', 'foot_r', 'right foot', '右足３'],
+  'spine': ['上半身', 'spine', 'upper body', '上半身２'],
+  'waist': ['下半身', 'waist', 'lower body', '腰']
+};
+
+// Essential functions
+function updateCameraPosition() {
+  const spherical = new THREE.Spherical(cameraDistance, cameraPhi, cameraTheta);
+  const position = new THREE.Vector3();
+  position.setFromSpherical(spherical);
+  position.add(cameraTarget);
+  
+  camera.position.copy(position);
+  camera.lookAt(cameraTarget);
+}
+
+// Light functions
+function createLights() {
+  createSunLight();
+  createFloodLight();
+}
+
+function createSunLight() {
+  // Remove existing sun light if any
+  if (sunLight) {
+    scene.remove(sunLight);
+    if (sunHelper) scene.remove(sunHelper);
+  }
+  
+  // Calculate sun position from azimuth and elevation
+  const phi = (90 - sunElevation) * (Math.PI / 180);
+  const theta = (sunAzimuth - 90) * (Math.PI / 180);
+  
+  const radius = 100; // Distance from scene center
+  
+  const sunPosition = new THREE.Vector3();
+  sunPosition.setFromSphericalCoords(radius, phi, theta);
+  
+  // Create directional light (sun)
+  sunLight = new THREE.DirectionalLight(0xffffff, sunIntensity);
+  sunLight.position.copy(sunPosition);
+  sunLight.castShadow = true;
+  
+  // Configure shadow properties for better quality
+  configureShadowProperties(sunLight);
+  
+  // Set shadow camera to cover both models
+  sunLight.shadow.camera.left = -50;
+  sunLight.shadow.camera.right = 50;
+  sunLight.shadow.camera.top = 50;
+  sunLight.shadow.camera.bottom = -50;
+  
+  scene.add(sunLight);
+  
+  // Add a small helper sphere to visualize sun position
+  const sunGeometry = new THREE.SphereGeometry(2, 16, 16);
+  const sunMaterial = new THREE.MeshBasicMaterial({ 
+    color: 0xffcc00,
+    transparent: true,
+    opacity: 0.7
+  });
+  sunHelper = new THREE.Mesh(sunGeometry, sunMaterial);
+  sunHelper.position.copy(sunPosition);
+  scene.add(sunHelper);
+  
+  updateSunVisualizer();
+}
+
+function createFloodLight() {
+  // Remove existing flood light if any
+  if (floodLight) {
+    scene.remove(floodLight);
+    if (floodHelper) scene.remove(floodHelper);
+  }
+  
+  // Calculate flood position from azimuth and elevation
+  const phi = (90 - floodElevation) * (Math.PI / 180);
+  const theta = (floodAzimuth - 90) * (Math.PI / 180);
+  
+  const floodPosition = new THREE.Vector3();
+  floodPosition.setFromSphericalCoords(floodDistance, phi, theta);
+  
+  // Create directional light (flood)
+  floodLight = new THREE.DirectionalLight(0x88aaff, floodIntensity);
+  floodLight.position.copy(floodPosition);
+  floodLight.castShadow = true;
+  
+  // Configure shadow properties for better quality
+  configureShadowProperties(floodLight);
+  
+  // Set tighter shadow camera for more precise shadows
+  floodLight.shadow.camera.left = -30;
+  floodLight.shadow.camera.right = 30;
+  floodLight.shadow.camera.top = 30;
+  floodLight.shadow.camera.bottom = -30;
+  
+  scene.add(floodLight);
+  
+  // Add a small helper sphere to visualize flood position
+  const floodGeometry = new THREE.SphereGeometry(1.5, 16, 16);
+  const floodMaterial = new THREE.MeshBasicMaterial({ 
+    color: 0x0088ff,
+    transparent: true,
+    opacity: 0.7
+  });
+  floodHelper = new THREE.Mesh(floodGeometry, floodMaterial);
+  floodHelper.position.copy(floodPosition);
+  scene.add(floodHelper);
+  
+  updateFloodVisualizer();
+}
+
+function configureShadowProperties(light) {
+  light.shadow.mapSize.width = 2048;
+  light.shadow.mapSize.height = 2048;
+  light.shadow.camera.near = 0.5;
+  light.shadow.camera.far = 500;
+  light.shadow.bias = -0.0001;
+}
+
+function updateSunPosition() {
+  if (!sunLight || !sunHelper) return;
+  
+  const phi = (90 - sunElevation) * (Math.PI / 180);
+  const theta = (sunAzimuth - 90) * (Math.PI / 180);
+  const radius = 100;
+  
+  const sunPosition = new THREE.Vector3();
+  sunPosition.setFromSphericalCoords(radius, phi, theta);
+  
+  sunLight.position.copy(sunPosition);
+  sunHelper.position.copy(sunPosition);
+  
+  // Update light intensity
+  sunLight.intensity = sunIntensity;
+  
+  // Make sun helper visible only if sun is enabled and in sun mode
+  sunHelper.visible = isSunEnabled && !isFloodMode;
+  sunLight.visible = isSunEnabled && !isFloodMode;
+  
+  updateSunVisualizer();
+}
+
+function updateFloodPosition() {
+  if (!floodLight || !floodHelper) return;
+  
+  const phi = (90 - floodElevation) * (Math.PI / 180);
+  const theta = (floodAzimuth - 90) * (Math.PI / 180);
+  
+  const floodPosition = new THREE.Vector3();
+  floodPosition.setFromSphericalCoords(floodDistance, phi, theta);
+  
+  floodLight.position.copy(floodPosition);
+  floodHelper.position.copy(floodPosition);
+  
+  // Update light intensity
+  floodLight.intensity = floodIntensity;
+  
+  // Make flood helper visible only if flood is enabled and in flood mode
+  floodHelper.visible = isFloodEnabled && isFloodMode;
+  floodLight.visible = isFloodEnabled && isFloodMode;
+  
+  updateFloodVisualizer();
+}
+
+function toggleLightMode() {
+  isFloodMode = !isFloodMode;
+  
+  const toggleBtn = document.getElementById('light-toggle');
+  const sunPanel = document.getElementById('sun-controls-panel');
+  const floodPanel = document.getElementById('flood-controls-panel');
+  const sunVis = document.getElementById('sun-visualizer');
+  const floodVis = document.getElementById('flood-visualizer');
+  
+  if (isFloodMode) {
+    toggleBtn.textContent = 'Switch to Sun Light';
+    toggleBtn.classList.add('flood-mode');
+    sunPanel.style.display = 'none';
+    floodPanel.style.display = 'block';
+    sunVis.style.display = 'none';
+    
+    // Enable flood light if it's not enabled
+    if (!isFloodEnabled) {
+      isFloodEnabled = true;
+      if (floodLight) floodLight.visible = true;
+      if (floodHelper) floodHelper.visible = true;
+    }
+    
+    // Disable sun light
+    if (sunLight) sunLight.visible = false;
+    if (sunHelper) sunHelper.visible = false;
+    
+    // Show flood visualizer if enabled
+    if (floodVis.style.display !== 'none') {
+      floodVis.style.display = 'block';
+    }
+  } else {
+    toggleBtn.textContent = 'Switch to Flood Light';
+    toggleBtn.classList.remove('flood-mode');
+    sunPanel.style.display = 'block';
+    floodPanel.style.display = 'none';
+    floodVis.style.display = 'none';
+    
+    // Enable sun light if it's not enabled
+    if (!isSunEnabled) {
+      isSunEnabled = true;
+      if (sunLight) sunLight.visible = true;
+      if (sunHelper) sunHelper.visible = true;
+    }
+    
+    // Disable flood light
+    if (floodLight) floodLight.visible = false;
+    if (floodHelper) floodHelper.visible = false;
+    
+    // Show sun visualizer if enabled
+    if (sunVis.style.display !== 'none') {
+      sunVis.style.display = 'block';
+    }
+  }
+  
+  updateSunVisualizer();
+  updateFloodVisualizer();
+}
+
+function updateSunVisualizer() {
+  if (!sunVisualizerCanvas || !sunVisualizerCtx) return;
+  
+  const canvas = sunVisualizerCanvas;
+  const ctx = sunVisualizerCtx;
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  const radius = canvas.width / 2 - 5;
+  
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw background circle
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 204, 0, 0.5)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Draw compass directions
+  ctx.font = '10px Arial';
+  ctx.fillStyle = '#ffcc00';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('N', centerX, 12);
+  ctx.fillText('E', canvas.width - 12, centerY);
+  ctx.fillText('S', centerX, canvas.height - 12);
+  ctx.fillText('W', 12, centerY);
+  
+  // Draw horizon line
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius * 0.7, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  
+  // Calculate sun position on the visualizer
+  const sunX = centerX + Math.sin(sunAzimuth * Math.PI / 180) * (radius * 0.7 * (sunElevation / 90));
+  const sunY = centerY - Math.cos(sunAzimuth * Math.PI / 180) * (radius * 0.7 * (sunElevation / 90));
+  
+  // Draw sun position
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, 8, 0, Math.PI * 2);
+  ctx.fillStyle = (isSunEnabled && !isFloodMode) ? '#ffcc00' : '#666666';
+  ctx.fill();
+  
+  // Draw sun rays
+  if (isSunEnabled && !isFloodMode) {
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * Math.PI / 4) + (Date.now() / 1000);
+      const rayLength = 12;
+      const rayX = sunX + Math.cos(angle) * rayLength;
+      const rayY = sunY + Math.sin(angle) * rayLength;
+      ctx.moveTo(sunX, sunY);
+      ctx.lineTo(rayX, rayY);
+    }
+    ctx.strokeStyle = '#ffaa00';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  
+  // Update intensity display
+  document.getElementById('sun-intensity-value').textContent = 
+    `${Math.round(sunIntensity * 100)}%`;
+}
+
+function updateFloodVisualizer() {
+  if (!floodVisualizerCanvas || !floodVisualizerCtx) return;
+  
+  const canvas = floodVisualizerCanvas;
+  const ctx = floodVisualizerCtx;
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  const radius = canvas.width / 2 - 5;
+  
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw background circle
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0, 136, 255, 0.5)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Draw compass directions
+  ctx.font = '10px Arial';
+  ctx.fillStyle = '#0088ff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('N', centerX, 12);
+  ctx.fillText('E', canvas.width - 12, centerY);
+  ctx.fillText('S', centerX, canvas.height - 12);
+  ctx.fillText('W', 12, centerY);
+  
+  // Draw distance rings
+  for (let i = 1; i <= 3; i++) {
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius * (i / 3), 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  
+  // Calculate flood position on the visualizer
+  const distanceRatio = (floodDistance - 10) / 90; // Normalize distance to 0-1 range
+  const floodX = centerX + Math.sin(floodAzimuth * Math.PI / 180) * (radius * distanceRatio * (floodElevation / 90));
+  const floodY = centerY - Math.cos(floodAzimuth * Math.PI / 180) * (radius * distanceRatio * (floodElevation / 90));
+  
+  // Draw flood position
+  ctx.beginPath();
+  ctx.arc(floodX, floodY, 8, 0, Math.PI * 2);
+  ctx.fillStyle = (isFloodEnabled && isFloodMode) ? '#0088ff' : '#666666';
+  ctx.fill();
+  
+  // Draw flood light direction indicator
+  if (isFloodEnabled && isFloodMode) {
+    ctx.beginPath();
+    ctx.moveTo(floodX, floodY);
+    const targetX = centerX;
+    const targetY = centerY;
+    ctx.lineTo(targetX, targetY);
+    ctx.strokeStyle = '#0088ff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Draw light cone
+    ctx.beginPath();
+    const coneAngle = 0.3; // radians
+    const coneLength = radius * 0.5;
+    ctx.moveTo(floodX, floodY);
+    ctx.lineTo(
+      floodX + Math.cos(floodAzimuth * Math.PI / 180 + coneAngle) * coneLength,
+      floodY - Math.sin(floodAzimuth * Math.PI / 180 + coneAngle) * coneLength
+    );
+    ctx.lineTo(
+      floodX + Math.cos(floodAzimuth * Math.PI / 180 - coneAngle) * coneLength,
+      floodY - Math.sin(floodAzimuth * Math.PI / 180 - coneAngle) * coneLength
+    );
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0, 136, 255, 0.2)';
+    ctx.fill();
+  }
+  
+  // Update intensity display
+  document.getElementById('flood-intensity-value').textContent = 
+    `${Math.round(floodIntensity * 100)}%`;
+}
+
+function setupLightControls() {
+  // Get UI elements
+  const toggleBtn = document.getElementById('light-toggle');
+  
+  // Sun controls
+  const azimuthSlider = document.getElementById('sun-azimuth');
+  const elevationSlider = document.getElementById('sun-elevation');
+  const intensitySlider = document.getElementById('sun-intensity');
+  const resetSunBtn = document.getElementById('reset-sun');
+  const toggleSunBtn = document.getElementById('toggle-sun');
+  const toggleSunVisualizerBtn = document.getElementById('toggle-sun-visualizer');
+  
+  // Flood controls
+  const floodAzimuthSlider = document.getElementById('flood-azimuth');
+  const floodElevationSlider = document.getElementById('flood-elevation');
+  const floodIntensitySlider = document.getElementById('flood-intensity');
+  const floodDistanceSlider = document.getElementById('flood-distance');
+  const resetFloodBtn = document.getElementById('reset-flood');
+  const toggleFloodBtn = document.getElementById('toggle-flood');
+  const toggleFloodVisualizerBtn = document.getElementById('toggle-flood-visualizer');
+  
+  // Set initial values
+  azimuthSlider.value = sunAzimuth;
+  elevationSlider.value = sunElevation;
+  intensitySlider.value = sunIntensity * 100;
+  
+  floodAzimuthSlider.value = floodAzimuth;
+  floodElevationSlider.value = floodElevation;
+  floodIntensitySlider.value = floodIntensity * 100;
+  floodDistanceSlider.value = floodDistance;
+  
+  // Add event listeners
+  toggleBtn.addEventListener('click', toggleLightMode);
+  
+  // Sun event listeners
+  azimuthSlider.addEventListener('input', function() {
+    sunAzimuth = parseInt(this.value);
+    updateSunPosition();
+  });
+  
+  elevationSlider.addEventListener('input', function() {
+    sunElevation = parseInt(this.value);
+    updateSunPosition();
+  });
+  
+  intensitySlider.addEventListener('input', function() {
+    sunIntensity = parseInt(this.value) / 100;
+    updateSunPosition();
+  });
+  
+  resetSunBtn.addEventListener('click', function() {
+    sunAzimuth = 45;
+    sunElevation = 60;
+    sunIntensity = 1.0;
+    isSunEnabled = true;
+    
+    azimuthSlider.value = sunAzimuth;
+    elevationSlider.value = sunElevation;
+    intensitySlider.value = sunIntensity * 100;
+    
+    updateSunPosition();
+  });
+  
+  toggleSunBtn.addEventListener('click', function() {
+    isSunEnabled = !isSunEnabled;
+    if (sunLight) sunLight.visible = isSunEnabled && !isFloodMode;
+    if (sunHelper) sunHelper.visible = isSunEnabled && !isFloodMode;
+    updateSunVisualizer();
+    this.textContent = isSunEnabled ? 'Disable Sun' : 'Enable Sun';
+  });
+  
+  toggleSunVisualizerBtn.addEventListener('click', function() {
+    const visualizer = document.getElementById('sun-visualizer');
+    const isVisible = visualizer.style.display !== 'none';
+    visualizer.style.display = isVisible ? 'none' : 'block';
+    this.textContent = isVisible ? 'Hide Sun Position' : 'Show Sun Position';
+  });
+  
+  // Flood event listeners
+  floodAzimuthSlider.addEventListener('input', function() {
+    floodAzimuth = parseInt(this.value);
+    updateFloodPosition();
+  });
+  
+  floodElevationSlider.addEventListener('input', function() {
+    floodElevation = parseInt(this.value);
+    updateFloodPosition();
+  });
+  
+  floodIntensitySlider.addEventListener('input', function() {
+    floodIntensity = parseInt(this.value) / 100;
+    updateFloodPosition();
+  });
+  
+  floodDistanceSlider.addEventListener('input', function() {
+    floodDistance = parseInt(this.value);
+    updateFloodPosition();
+  });
+  
+  resetFloodBtn.addEventListener('click', function() {
+    floodAzimuth = 0;
+    floodElevation = 45;
+    floodIntensity = 1.0;
+    floodDistance = 30;
+    isFloodEnabled = true;
+    
+    floodAzimuthSlider.value = floodAzimuth;
+    floodElevationSlider.value = floodElevation;
+    floodIntensitySlider.value = floodIntensity * 100;
+    floodDistanceSlider.value = floodDistance;
+    
+    updateFloodPosition();
+  });
+  
+  toggleFloodBtn.addEventListener('click', function() {
+    isFloodEnabled = !isFloodEnabled;
+    if (floodLight) floodLight.visible = isFloodEnabled && isFloodMode;
+    if (floodHelper) floodHelper.visible = isFloodEnabled && isFloodMode;
+    updateFloodVisualizer();
+    this.textContent = isFloodEnabled ? 'Disable Flood' : 'Enable Flood';
+  });
+  
+  toggleFloodVisualizerBtn.addEventListener('click', function() {
+    const visualizer = document.getElementById('flood-visualizer');
+    const isVisible = visualizer.style.display !== 'none';
+    visualizer.style.display = isVisible ? 'none' : 'block';
+    this.textContent = isVisible ? 'Hide Flood Position' : 'Show Flood Position';
+  });
+  
+  // Initialize visualizer canvases
+  sunVisualizer = document.getElementById('sun-visualizer');
+  sunVisualizerCanvas = sunVisualizer.querySelector('.sun-visualizer-canvas');
+  sunVisualizerCtx = sunVisualizerCanvas.getContext('2d');
+  
+  floodVisualizer = document.getElementById('flood-visualizer');
+  floodVisualizerCanvas = floodVisualizer.querySelector('.flood-visualizer-canvas');
+  floodVisualizerCtx = floodVisualizerCanvas.getContext('2d');
+  
+  // Hide visualizers by default
+  sunVisualizer.style.display = 'none';
+  floodVisualizer.style.display = 'none';
+  
+  // Create initial lights
+  createLights();
+  
+  // Start animation for visualizers
+  function animateLightVisualizers() {
+    if (sunVisualizer.style.display !== 'none') {
+      updateSunVisualizer();
+    }
+    if (floodVisualizer.style.display !== 'none') {
+      updateFloodVisualizer();
+    }
+    requestAnimationFrame(animateLightVisualizers);
+  }
+  animateLightVisualizers();
+}
+
+function setupTouchControls() {
+  const container = document.getElementById('container');
+  const gestureHelp = document.getElementById('gesture-help');
+
+  container.addEventListener('touchstart', function(e) {
+    const now = Date.now();
+    const isDoubleTap = (now - touchState.lastTapTime) < 300;
+    touchState.lastTapTime = now;
+
+    gestureHelp.style.display = 'block';
+    setTimeout(() => gestureHelp.style.display = 'none', 2000);
+
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const mouse = new THREE.Vector2();
+      mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+
+      const targetModels = getTargetModels();
+      let hitModel = false;
+      
+      for (const model of targetModels) {
+        if (!model) continue;
+        const intersects = raycaster.intersectObject(model, true);
+        if (intersects.length > 0) {
+          hitModel = true;
+          break;
+        }
+      }
+
+      if (hitModel && controlMode === 'model') {
+        touchState.isTouchingModel = true;
+        isMovingModel = true;
+        moveStartX = touch.clientX;
+        moveStartY = touch.clientY;
+      } else if (controlMode === 'bone' && isDoubleTap) {
+        handleBoneSelection(e);
+        e.preventDefault();
+        return;
+      } else {
+        touchState.isTouchingModel = false;
+        isRotating = true;
+        rotateStartX = touch.clientX;
+        rotateStartY = touch.clientY;
+        
+        if (controlMode === 'bone') {
+          touchState.longPressTimer = setTimeout(() => {
+            touchState.isLongPress = true;
+            if (handleBoneDragStart(e, true)) {
+              e.preventDefault();
+              return;
+            }
+          }, 500);
+        }
+      }
+
+    } else if (e.touches.length === 2) {
+      touchState.isTwoFinger = true;
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      
+      touchState.initialDistance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      
+      touchState.initialPan.x = (touch1.clientX + touch2.clientX) / 2;
+      touchState.initialPan.y = (touch1.clientY + touch2.clientY) / 2;
+      
+      panStartX = touchState.initialPan.x;
+      panStartY = touchState.initialPan.y;
+    }
+    
+    e.preventDefault();
+  });
+
+  container.addEventListener('touchmove', function(e) {
+    if (controlMode === 'bone' && isDraggingBone) {
+      handleBoneDrag(e, true);
+      return;
+    }
+
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      
+      if (touchState.isTouchingModel && controlMode === 'model' && isMovingModel) {
+        const deltaX = touch.clientX - moveStartX;
+        const deltaY = touch.clientY - moveStartY;
+
+        const moveSpeed = 0.05;
+        const targetModels = getTargetModels();
+        targetModels.forEach(model => {
+          if (model) {
+            model.position.x += deltaX * moveSpeed;
+            model.position.z -= deltaY * moveSpeed;
+          }
+        });
+
+        moveStartX = touch.clientX;
+        moveStartY = touch.clientY;
+      } else if (isRotating) {
+        const deltaX = touch.clientX - rotateStartX;
+        const deltaY = touch.clientY - rotateStartY;
+
+        if (controlMode === 'model') {
+          const rotationSpeed = 0.01;
+          const targetModels = getTargetModels();
+          targetModels.forEach(model => {
+            if (model) {
+              model.rotation.y += deltaX * rotationSpeed;
+              model.rotation.x += deltaY * rotationSpeed;
+            }
+          });
+        } else if (controlMode === 'camera') {
+          const orbitSpeed = 0.01;
+          cameraTheta -= deltaX * orbitSpeed;
+          cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraPhi + deltaY * orbitSpeed));
+          updateCameraPosition();
+        }
+
+        rotateStartX = touch.clientX;
+        rotateStartY = touch.clientY;
+      }
+    } else if (e.touches.length === 2 && touchState.isTwoFinger) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+
+      const currentDistance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      const zoomDelta = (touchState.initialDistance - currentDistance) * 0.01;
+      cameraDistance = Math.max(5, Math.min(100, cameraDistance + zoomDelta));
+      touchState.initialDistance = currentDistance;
+
+      const midX = (touch1.clientX + touch2.clientX) / 2;
+      const midY = (touch1.clientY + touch2.clientY) / 2;
+      const deltaX = midX - panStartX;
+      const deltaY = midY - panStartY;
+
+      const panSpeed = 0.005;
+      const panVector = new THREE.Vector3(-deltaX, deltaY, 0).multiplyScalar(panSpeed);
+      panVector.applyQuaternion(camera.quaternion);
+      cameraTarget.add(panVector);
+
+      panStartX = midX;
+      panStartY = midY;
+
+      updateCameraPosition();
+    }
+
+    e.preventDefault();
+  });
+
+  container.addEventListener('touchend', function(e) {
+    if (touchState.longPressTimer) {
+      clearTimeout(touchState.longPressTimer);
+      touchState.longPressTimer = null;
+    }
+
+    if (controlMode === 'bone') {
+      handleBoneDragEnd();
+      touchState.isLongPress = false;
+    }
+
+    isMovingModel = false;
+    isRotating = false;
+    touchState.isTouchingModel = false;
+    
+    if (e.touches.length < 2) {
+      touchState.isTwoFinger = false;
+    }
+  });
+}
+
+function setupMouseControls() {
+  const container = document.getElementById('container');
+  let isMouseDown = false;
+  let isRightClick = false;
+  let isMiddleClick = false;
+  let lastMouseX = 0;
+  let lastMouseY = 0;
+
+  container.addEventListener('mousedown', function(e) {
+    isMouseDown = true;
+    isRightClick = e.button === 2;
+    isMiddleClick = e.button === 1;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    
+    const mouse = new THREE.Vector2();
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
+
+    const targetModels = getTargetModels();
+    let hitModel = false;
+    
+    for (const model of targetModels) {
+      if (!model) continue;
+      const intersects = raycaster.intersectObject(model, true);
+      if (intersects.length > 0) {
+        hitModel = true;
+        break;
+      }
+    }
+
+    if (hitModel && controlMode === 'model' && e.button === 0) {
+      isMovingModel = true;
+      moveStartX = e.clientX;
+      moveStartY = e.clientY;
+    } else {
+      if (controlMode === 'bone') {
+        if (handleBoneDragStart(e, false)) {
+          return;
+        }
+        
+        if (e.button === 0) {
+          const intersects = raycaster.intersectObjects(boneHelpers);
+          if (intersects.length > 0) {
+            selectedBone = intersects[0].object.userData.bone;
+            selectedModel = intersects[0].object.userData.model;
+            updateBoneSelection();
+            updateBoneButtons();
+          }
+        }
+      }
+
+      isRotating = true;
+      rotateStartX = e.clientX;
+      rotateStartY = e.clientY;
+    }
+    
+    e.preventDefault();
+  });
+
+  container.addEventListener('mousemove', function(e) {
+    if (controlMode === 'bone' && isDraggingBone) {
+      handleBoneDrag(e, false);
+      return;
+    }
+    
+    if (!isMouseDown) return;
+
+    const deltaX = e.clientX - lastMouseX;
+    const deltaY = e.clientY - lastMouseY;
+    
+    if (isMovingModel && controlMode === 'model') {
+      const moveSpeed = 0.02;
+      const targetModels = getTargetModels();
+      targetModels.forEach(model => {
+        if (model) {
+          model.position.x += deltaX * moveSpeed;
+          model.position.z -= deltaY * moveSpeed;
+        }
+      });
+    } else if (isRotating) {
+      if (controlMode === 'model') {
+        const targetModels = getTargetModels();
+        
+        if (isMiddleClick) {
+          const panSpeed = 0.01;
+          const panVector = new THREE.Vector3(-deltaX, deltaY, 0).multiplyScalar(panSpeed);
+          panVector.applyQuaternion(camera.quaternion);
+          cameraTarget.add(panVector);
+          updateCameraPosition();
+        } else if (isRightClick) {
+          const moveSpeed = 0.02;
+          targetModels.forEach(model => {
+            if (model) {
+              model.position.x += deltaX * moveSpeed;
+              model.position.y -= deltaY * moveSpeed;
+            }
+          });
+        } else {
+          const rotationSpeed = 0.01;
+          targetModels.forEach(model => {
+            if (model) {
+              model.rotation.y += deltaX * rotationSpeed;
+              model.rotation.x += deltaY * rotationSpeed;
+            }
+          });
+        }
+      } else if (controlMode === 'camera') {
+        if (isRightClick || isMiddleClick) {
+          const panSpeed = 0.01;
+          const panVector = new THREE.Vector3(-deltaX, deltaY, 0).multiplyScalar(panSpeed);
+          panVector.applyQuaternion(camera.quaternion);
+          cameraTarget.add(panVector);
+          updateCameraPosition();
+        } else {
+          const orbitSpeed = 0.01;
+          cameraTheta -= deltaX * orbitSpeed;
+          cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraPhi + deltaY * orbitSpeed));
+          updateCameraPosition();
+        }
+      }
+    }
+    
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+  });
+
+  container.addEventListener('mouseup', function() {
+    isMouseDown = false;
+    isMovingModel = false;
+    isRotating = false;
+    if (controlMode === 'bone') {
+      handleBoneDragEnd();
+    }
+  });
+
+  container.addEventListener('wheel', function(e) {
+    if (controlMode !== 'bone') {
+      const zoomSpeed = 0.5;
+      cameraDistance = Math.max(5, Math.min(100, cameraDistance + e.deltaY * 0.01 * zoomSpeed));
+      updateCameraPosition();
+      e.preventDefault();
+    }
+  });
+
+  container.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+  });
+}
+
+function setupKeyboardControls() {
+  document.addEventListener('keydown', function(e) {
+    keys[e.key.toLowerCase()] = true;
+    
+    switch(e.key.toLowerCase()) {
+      case 'r':
+        if (controlMode === 'bone') {
+          resetSelectedBone();
+        } else {
+          resetView();
+        }
+        break;
+      case 'f':
+        toggleWireframe();
+        break;
+      case 'h':
+        document.getElementById('help-overlay').style.display = 
+          document.getElementById('help-overlay').style.display === 'block' ? 'none' : 'block';
+        break;
+      case 'c':
+        if (controlMode !== 'bone') toggleControlMode();
+        break;
+      case 'b':
+        toggleBoneMode();
+        break;
+      case '1':
+        selectModel('both');
+        break;
+      case '2':
+        selectModel('model1');
+        break;
+      case '3':
+        selectModel('model2');
+        break;
+      case 'l':
+        toggleLightMode();
+        break;
+    }
+  });
+
+  document.addEventListener('keyup', function(e) {
+    keys[e.key.toLowerCase()] = false;
+  });
+}
+
+function handleKeyboardInput() {
+  if (controlMode === 'bone') {
+    handleBoneEditing();
+    return;
+  }
+  
+  const moveSpeed = 0.1;
+  const rotationSpeed = 0.03;
+  
+  if (controlMode === 'model') {
+    const targetModels = getTargetModels();
+
+    if (keys['w']) {
+      targetModels.forEach(model => {
+        if (model) model.position.z -= moveSpeed;
+      });
+    }
+    if (keys['s']) {
+      targetModels.forEach(model => {
+        if (model) model.position.z += moveSpeed;
+      });
+    }
+    if (keys['a']) {
+      targetModels.forEach(model => {
+        if (model) model.position.x -= moveSpeed;
+      });
+    }
+    if (keys['d']) {
+      targetModels.forEach(model => {
+        if (model) model.position.x += moveSpeed;
+      });
+    }
+
+    if (keys['q']) {
+      targetModels.forEach(model => {
+        if (model) model.position.y += moveSpeed;
+      });
+    }
+    if (keys['e']) {
+      targetModels.forEach(model => {
+        if (model) model.position.y -= moveSpeed;
+      });
+    }
+
+    if (keys['arrowup']) {
+      targetModels.forEach(model => {
+        if (model) model.rotation.x -= rotationSpeed;
+      });
+    }
+    if (keys['arrowdown']) {
+      targetModels.forEach(model => {
+        if (model) model.rotation.x += rotationSpeed;
+      });
+    }
+    if (keys['arrowleft']) {
+      targetModels.forEach(model => {
+        if (model) model.rotation.y += rotationSpeed;
+      });
+    }
+    if (keys['arrowright']) {
+      targetModels.forEach(model => {
+        if (model) model.rotation.y -= rotationSpeed;
+      });
+    }
+  } else if (controlMode === 'camera') {
+    if (keys['w']) {
+      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      cameraTarget.add(forward.multiplyScalar(moveSpeed));
+      updateCameraPosition();
+    }
+    if (keys['s']) {
+      const backward = new THREE.Vector3(0, 0, 1).applyQuaternion(camera.quaternion);
+      cameraTarget.add(backward.multiplyScalar(moveSpeed));
+      updateCameraPosition();
+    }
+    if (keys['a']) {
+      const left = new THREE.Vector3(-1, 0, 0).applyQuaternion(camera.quaternion);
+      cameraTarget.add(left.multiplyScalar(moveSpeed));
+      updateCameraPosition();
+    }
+    if (keys['d']) {
+      const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+      cameraTarget.add(right.multiplyScalar(moveSpeed));
+      updateCameraPosition();
+    }
+
+    if (keys['q']) {
+      cameraTarget.y += moveSpeed;
+      updateCameraPosition();
+    }
+    if (keys['e']) {
+      cameraTarget.y -= moveSpeed;
+      updateCameraPosition();
+    }
+
+    if (keys['arrowup']) {
+      cameraPhi = Math.max(0.1, cameraPhi - rotationSpeed);
+      updateCameraPosition();
+    }
+    if (keys['arrowdown']) {
+      cameraPhi = Math.min(Math.PI - 0.1, cameraPhi + rotationSpeed);
+      updateCameraPosition();
+    }
+    if (keys['arrowleft']) {
+      cameraTheta += rotationSpeed;
+      updateCameraPosition();
+    }
+    if (keys['arrowright']) {
+      cameraTheta -= rotationSpeed;
+      updateCameraPosition();
+    }
+  }
+}
+
+function generateState() {
+  const params = new URLSearchParams();
+  
+  if (pmxPath1) params.set('pmx', pmxPath1);
+  if (pmxPath2) params.set('pmx2', pmxPath2);
+  if (vpdPath1) params.set('vpd', vpdPath1);
+  if (vpdPath2) params.set('vpd2', vpdPath2);
+  
+  // Camera state: targetX,targetY,targetZ,distance,phi,theta
+  const camState = `${cameraTarget.x.toFixed(2)},${cameraTarget.y.toFixed(2)},${cameraTarget.z.toFixed(2)},${cameraDistance.toFixed(2)},${cameraPhi.toFixed(4)},${cameraTheta.toFixed(4)}`;
+  params.set('cam', camState);
+  
+  // Model 1 state: posX,posY,posZ,rotX,rotY,rotZ
+  if (model1) {
+    const m1State = `${model1.position.x.toFixed(2)},${model1.position.y.toFixed(2)},${model1.position.z.toFixed(2)},${model1.rotation.x.toFixed(4)},${model1.rotation.y.toFixed(4)},${model1.rotation.z.toFixed(4)}`;
+    params.set('m1', m1State);
+  }
+  
+  // Model 2 state
+  if (model2) {
+    const m2State = `${model2.position.x.toFixed(2)},${model2.position.y.toFixed(2)},${model2.position.z.toFixed(2)},${model2.rotation.x.toFixed(4)},${model2.rotation.y.toFixed(4)},${model2.rotation.z.toFixed(4)}`;
+    params.set('m2', m2State);
+  }
+  
+  // Light state: mode,sunAzimuth,sunElevation,sunIntensity,sunEnabled,floodAzimuth,floodElevation,floodIntensity,floodDistance,floodEnabled
+  const lightState = `${isFloodMode ? 1 : 0},${sunAzimuth},${sunElevation},${sunIntensity.toFixed(2)},${isSunEnabled ? 1 : 0},${floodAzimuth},${floodElevation},${floodIntensity.toFixed(2)},${floodDistance},${isFloodEnabled ? 1 : 0}`;
+  params.set('light', lightState);
+  
+  // Add stored poses to URL if they exist
+  const storedPose1 = localStorage.getItem('stor1');
+  const storedPose2 = localStorage.getItem('stor2');
+  
+  if (storedPose1) {
+    params.set('stor1', encodeURIComponent(storedPose1));
+  }
+  
+  if (storedPose2) {
+    params.set('stor2', encodeURIComponent(storedPose2));
+  }
+  
+  const stateURL = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+  
+  // Show URL in textbox
+  const textbox = document.getElementById('state-textbox');
+  textbox.value = stateURL;
+  textbox.style.display = 'block';
+  textbox.select();
+  
+  return stateURL;
+}
+
+function loadStateFromURL() {
+  if (stateCam) {
+    const parts = stateCam.split(',');
+    if (parts.length === 6) {
+      cameraTarget.set(parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2]));
+      cameraDistance = parseFloat(parts[3]);
+      cameraPhi = parseFloat(parts[4]);
+      cameraTheta = parseFloat(parts[5]);
+      updateCameraPosition();
+    }
+  }
+  
+  // Load light state from URL
+  const lightState = urlParams.get('light');
+  if (lightState) {
+    const parts = lightState.split(',');
+    if (parts.length >= 10) {
+      isFloodMode = parts[0] === '1';
+      sunAzimuth = parseFloat(parts[1]);
+      sunElevation = parseFloat(parts[2]);
+      sunIntensity = parseFloat(parts[3]);
+      isSunEnabled = parts[4] === '1';
+      floodAzimuth = parseFloat(parts[5]);
+      floodElevation = parseFloat(parts[6]);
+      floodIntensity = parseFloat(parts[7]);
+      floodDistance = parseFloat(parts[8]);
+      isFloodEnabled = parts[9] === '1';
+      
+      // Update UI
+      setTimeout(() => {
+        // Update sun controls
+        document.getElementById('sun-azimuth').value = sunAzimuth;
+        document.getElementById('sun-elevation').value = sunElevation;
+        document.getElementById('sun-intensity').value = sunIntensity * 100;
+        
+        // Update flood controls
+        document.getElementById('flood-azimuth').value = floodAzimuth;
+        document.getElementById('flood-elevation').value = floodElevation;
+        document.getElementById('flood-intensity').value = floodIntensity * 100;
+        document.getElementById('flood-distance').value = floodDistance;
+        
+        // Set light mode
+        if (isFloodMode) {
+          toggleLightMode();
+        }
+        
+        // Update light positions
+        updateSunPosition();
+        updateFloodPosition();
+      }, 100);
+    }
+  }
+  
+  // Load stored poses from URL parameters
+  const urlStor1 = urlParams.get('stor1');
+  const urlStor2 = urlParams.get('stor2');
+  
+  if (urlStor1) {
+    try {
+      const decodedStor1 = decodeURIComponent(urlStor1);
+      // Validate it's valid JSON before storing
+      JSON.parse(decodedStor1);
+      localStorage.setItem('stor1', decodedStor1);
+      
+      // Apply to model1 if it exists
+      if (model1) {
+        setTimeout(() => {
+          const pose = JSON.parse(decodedStor1);
+          applyPoseToModelFromStorage(model1, pose);
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Invalid stor1 data in URL:', error);
+    }
+  }
+  
+  if (urlStor2) {
+    try {
+      const decodedStor2 = decodeURIComponent(urlStor2);
+      // Validate it's valid JSON before storing
+      JSON.parse(decodedStor2);
+      localStorage.setItem('stor2', decodedStor2);
+      
+      // Apply to model2 if it exists
+      if (model2) {
+        setTimeout(() => {
+          const pose = JSON.parse(decodedStor2);
+          applyPoseToModelFromStorage(model2, pose);
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Invalid stor2 data in URL:', error);
+    }
+  }
+}
+
+function applyModelStates() {
+  if (stateM1 && model1) {
+    const parts = stateM1.split(',');
+    if (parts.length === 6) {
+      model1.position.set(parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2]));
+      model1.rotation.set(parseFloat(parts[3]), parseFloat(parts[4]), parseFloat(parts[5]));
+    }
+  }
+  
+  if (stateM2 && model2) {
+    const parts = stateM2.split(',');
+    if (parts.length === 6) {
+      model2.position.set(parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2]));
+      model2.rotation.set(parseFloat(parts[3]), parseFloat(parts[4]), parseFloat(parts[5]));
+    }
+  }
+}
+
+function getTargetModels() {
+  switch(currentModel) {
+    case 'model1': return [model1];
+    case 'model2': return [model2];
+    default: return [model1, model2];
+  }
+}
+
+function resolveAssetPath(assetPath, defaultBase) {
+  if (!assetPath) return null;
+  assetPath = assetPath.trim();
+  if (/^(https?:|file:|\/)/i.test(assetPath)) return assetPath;
+  if (/^(\.\/|\.\.\/)/.test(assetPath)) return assetPath;
+  if (/^vpd\//i.test(assetPath)) return "./" + assetPath;
+  return (defaultBase || "./pmx/pronama/") + assetPath;
+}
+
+function loadModels() {
+  if (pmxPath1) {
+    const full1 = resolveAssetPath(pmxPath1, "./pmx/pronama/");
+    loader.load(full1, object => {
+      model1 = object;
+      model1.position.set(-5, 0, 0);
+      
+      // Enable shadows for model1
+      function enableShadows(obj) {
+        if (obj.isMesh) {
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+        }
+        obj.children.forEach(enableShadows);
+      }
+      enableShadows(model1);
+      
+      scene.add(model1);
+      if (vpdPath1) loadAndApplyVPD(model1, resolveAssetPath(vpdPath1, "./"));
+      applyModelStates();
+      updateModelInfo();
+      checkLoadingComplete();
+    }, null, err => console.error("Error loading PMX1", err));
+  }
+
+  if (pmxPath2) {
+    const full2 = resolveAssetPath(pmxPath2, "./pmx/pronama/");
+    loader.load(full2, object => {
+      model2 = object;
+      model2.position.set(5, 0, 0);
+      
+      // Enable shadows for model2
+      function enableShadows(obj) {
+        if (obj.isMesh) {
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+        }
+        obj.children.forEach(enableShadows);
+      }
+      enableShadows(model2);
+      
+      scene.add(model2);
+      if (vpdPath2) loadAndApplyVPD(model2, resolveAssetPath(vpdPath2, "./"));
+      applyModelStates();
+      updateModelInfo();
+      checkLoadingComplete();
+    }, null, err => console.error("Error loading PMX2", err));
+  }
+
+  if (!pmxPath1 && !pmxPath2) {
+    document.getElementById("loading").textContent = "No PMX models specified.";
+  }
+  
+  setTimeout(loadStateFromURL, 100);
+}
+
+function loadAndApplyVPD(model, vpdPath) {
+  console.log("Loading VPD:", vpdPath);
+  loader.loadVPD(vpdPath, false, function(vpd) {
+    console.log("VPD loaded successfully:", vpd);
+    requestAnimationFrame(() => {
+      try {
+        helper.pose(model, vpd);
+        console.log("Pose applied successfully to model");
+      } catch (error) {
+        console.error("Error applying pose:", error);
+      }
+    });
+  }, null, function(error) {
+    console.error("Error loading VPD:", error);
+  });
+}
+
+function updateModelInfo() {
+  let info = "";
+  if (model1) info += "Model 1 loaded" + (vpdPath1 ? " + Pose 1" : "") + "<br>";
+  if (model2) info += "Model 2 loaded" + (vpdPath2 ? " + Pose 2" : "") + "<br>";
+  document.getElementById("modelInfo").innerHTML = info;
+}
+
+function checkLoadingComplete() {
+  const total = [pmxPath1, pmxPath2].filter(Boolean).length;
+  const loaded = [model1, model2].filter(Boolean).length;
+  if (loaded === total) {
+    document.getElementById("loading").style.display = "none";
+    
+    // Always try to apply stored poses, regardless of URL parameters
+    setTimeout(() => {
+      applyStoredPosesOnLoad();
+    }, 1500);
+  }
+}
+
+function applyStoredPosesOnLoad() {
+  const storedPose1 = localStorage.getItem('stor1');
+  if (storedPose1 && model1) {
+    try {
+      const pose = JSON.parse(storedPose1);
+      applyPoseToModelFromStorage(model1, pose);
+    } catch (error) {
+      console.error('Error applying stored pose 1:', error);
+    }
+  }
+  
+  const storedPose2 = localStorage.getItem('stor2');
+  if (storedPose2 && model2) {
+    try {
+      const pose = JSON.parse(storedPose2);
+      applyPoseToModelFromStorage(model2, pose);
+    } catch (error) {
+      console.error('Error applying stored pose 2:', error);
+    }
+  }
+}
+
+function applyPoseToModelFromStorage(model, pose) {
+  if (!model || !model.skeleton || !pose) return;
+  
+  model.updateMatrixWorld(true);
+  
+  Object.keys(pose).forEach(japaneseName => {
+    const bone = model.skeleton.bones.find(b => b.name === japaneseName);
+    if (!bone || !pose[japaneseName]) return;
+
+    const relQuat = new THREE.Quaternion(
+      pose[japaneseName].quaternion.x,
+      pose[japaneseName].quaternion.y,
+      pose[japaneseName].quaternion.z,
+      pose[japaneseName].quaternion.w
+    );
+
+    bone.quaternion.copy(relQuat).normalize();
+  });
+
+  model.skeleton.update();
+  model.updateMatrixWorld(true);
+}
+
+function resetView() {
+  cameraTarget.set(0, 0, 0);
+  cameraDistance = 25;
+  cameraPhi = Math.PI / 6;
+  cameraTheta = 0;
+  updateCameraPosition();
+  
+  if (model1) {
+    model1.position.set(-5, 0, 0);
+    model1.rotation.set(0, 0, 0);
+  }
+  if (model2) {
+    model2.position.set(5, 0, 0);
+    model2.rotation.set(0, 0, 0);
+  }
+}
+
+function toggleWireframe() {
+  [model1, model2].forEach(model => {
+    if (!model) return;
+    model.traverse(c => {
+      if (c.isMesh) {
+        if (Array.isArray(c.material)) {
+          c.material.forEach(m => m.wireframe = !m.wireframe);
+        } else {
+          c.material.wireframe = !c.material.wireframe;
+        }
+      }
+    });
+  });
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function toggleControlMode() {
+  if (controlMode === 'bone') return;
+  controlMode = controlMode === 'model' ? 'camera' : 'model';
+  updateModeUI();
+}
+
+function toggleBoneMode() {
+  if (controlMode === 'bone') {
+    controlMode = 'model';
+    document.getElementById('bone-controls').style.display = 'none';
+    document.getElementById('selected-bone-info').style.display = 'none';
+    document.getElementById('bone-transform-controls').style.display = 'none';
+    
+    boneHelpers.forEach(helper => scene.remove(helper));
+    boneHelpers = [];
+    selectedBone = null;
+    selectedModel = null;
+  } else {
+    controlMode = 'bone';
+    document.getElementById('bone-controls').style.display = 'flex';
+    document.getElementById('bone-transform-controls').style.display = 'flex';
+    
+    const targetModels = getTargetModels();
+    selectedModel = targetModels[0] || null;
+    
+    setupBoneHelpers();
+    setBoneTransformMode('move');
+  }
+  updateModeUI();
+}
+
+function updateModeUI() {
+  const modeBtn = document.getElementById('toggleMode');
+  const boneBtn = document.getElementById('toggleBones');
+  const modeIndicator = document.getElementById('mode-indicator');
+  
+  if (controlMode === 'camera') {
+    modeBtn.textContent = 'Model Mode';
+    modeBtn.classList.add('active');
+    boneBtn.textContent = 'Bone Mode';
+    boneBtn.classList.remove('active');
+    modeIndicator.textContent = 'Mode: Camera Control';
+  } else if (controlMode === 'model') {
+    modeBtn.textContent = 'Camera Mode';
+    modeBtn.classList.remove('active');
+    boneBtn.textContent = 'Bone Mode';
+    boneBtn.classList.remove('active');
+    modeIndicator.textContent = 'Mode: Model Control';
+  } else if (controlMode === 'bone') {
+    modeBtn.textContent = 'Camera Mode';
+    modeBtn.classList.remove('active');
+    boneBtn.textContent = 'Exit Bones';
+    boneBtn.classList.add('active');
+    modeIndicator.textContent = 'Mode: Bone Editing';
+  }
+}
+
+function selectModel(model) {
+  currentModel = model;
+  document.querySelectorAll('.model-btn').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.getAttribute('data-model') === model) {
+      btn.classList.add('active');
+    }
+  });
+  updateSelectedModel();
+}
+
+function updateSelectedModel() {
+  if (controlMode === 'bone') {
+    const targetModels = getTargetModels();
+    selectedModel = targetModels[0] || null;
+    if (selectedModel && selectedBone) {
+      const boneName = selectedBone.name;
+      const newBone = findBoneInModel(selectedModel, boneName);
+      selectedBone = newBone;
+      updateBoneSelection();
+    }
+  }
+}
+
+function setupBoneHelpers() {
+  boneHelpers.forEach(helper => scene.remove(helper));
+  boneHelpers = [];
+
+  const targetModels = getTargetModels();
+  targetModels.forEach(model => {
+    if (model && model.skeleton) {
+      model.skeleton.bones.forEach(bone => {
+        const geometry = new THREE.SphereGeometry(0.15, 12, 12);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: 0x00ff00,
+          transparent: true,
+          opacity: 0.8
+        });
+        const helper = new THREE.Mesh(geometry, material);
+        
+        const worldPos = new THREE.Vector3();
+        bone.getWorldPosition(worldPos);
+        helper.position.copy(worldPos);
+        
+        helper.userData = { bone: bone, model: model };
+        helper.className = 'bone-helper';
+        boneHelpers.push(helper);
+        scene.add(helper);
+      });
+    }
+  });
+}
+
+function findBoneInModel(model, boneName) {
+  if (!model || !model.skeleton) return null;
+  return model.skeleton.bones.find(bone => 
+    bone.name.toLowerCase().includes(boneName.toLowerCase())
+  );
+}
+
+function selectBoneByType(boneType) {
+  if (!selectedModel) return;
+  
+  const possibleNames = boneMappings[boneType];
+  if (!possibleNames) return;
+  
+  for (const name of possibleNames) {
+    const bone = findBoneInModel(selectedModel, name);
+    if (bone) {
+      selectedBone = bone;
+      updateBoneSelection();
+      
+      document.querySelectorAll('.bone-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector(`.bone-btn[data-bone="${boneType}"]`).classList.add('active');
+      
+      return;
+    }
+  }
+}
+
+function updateBoneSelection() {
+  updateSelectedBoneInfo();
+  
+  if (selectedBone && selectedModel) {
+    boneHelpers.forEach(helper => {
+      if (helper.userData.bone === selectedBone) {
+        helper.material.color.set(0xff0000);
+        helper.scale.set(1.5, 1.5, 1.5);
+      } else {
+        helper.material.color.set(0x00ff00);
+        helper.scale.set(1, 1, 1);
+      }
+    });
+  } else {
+    boneHelpers.forEach(helper => {
+      helper.material.color.set(0x00ff00);
+      helper.scale.set(1, 1, 1);
+    });
+  }
+}
+
+function updateSelectedBoneInfo() {
+  const infoElement = document.getElementById('selected-bone-info');
+  
+  if (selectedBone && selectedModel) {
+    infoElement.textContent = `Selected: ${selectedBone.name} (${boneTransformMode} mode)`;
+    infoElement.style.display = 'block';
+  } else {
+    infoElement.textContent = 'No bone selected';
+    infoElement.style.display = 'block';
+  }
+}
+
+function setBoneTransformMode(mode) {
+  boneTransformMode = mode;
+  document.getElementById('move-bone').classList.toggle('active', mode === 'move');
+  document.getElementById('rotate-bone').classList.toggle('active', mode === 'rotate');
+  updateSelectedBoneInfo();
+}
+
+function handleBoneDragStart(event, isTouch = false) {
+  if (controlMode !== 'bone' || !selectedBone) return false;
+  
+  const mouse = new THREE.Vector2();
+  if (isTouch) {
+    mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+  } else {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  }
+  
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+  
+  const intersects = raycaster.intersectObjects(boneHelpers);
+  const hitSelectedBone = intersects.some(intersect => intersect.object.userData.bone === selectedBone);
+  
+  if (hitSelectedBone) {
+    isDraggingBone = true;
+    
+    if (boneTransformMode === 'move') {
+      const cameraDirection = new THREE.Vector3();
+      camera.getWorldDirection(cameraDirection);
+      dragPlane.setFromNormalAndCoplanarPoint(cameraDirection, selectedBone.getWorldPosition(new THREE.Vector3()));
+      
+      raycaster.ray.intersectPlane(dragPlane, dragStartPoint);
+      dragStartBonePosition.copy(selectedBone.position);
+    } else {
+      dragStartBoneRotation.copy(selectedBone.rotation);
+      dragStartPoint.set(mouse.x, mouse.y, 0);
+    }
+    
+    event.preventDefault();
+    return true;
+  }
+  
+  return false;
+}
+
+function handleBoneDrag(event, isTouch = false) {
+  if (!isDraggingBone || !selectedBone) return;
+  
+  const mouse = new THREE.Vector2();
+  if (isTouch) {
+    mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+  } else {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  }
+  
+  if (boneTransformMode === 'move') {
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
+    
+    const dragPoint = new THREE.Vector3();
+    if (raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
+      const delta = new THREE.Vector3().subVectors(dragPoint, dragStartPoint);
+      selectedBone.position.copy(dragStartBonePosition).add(delta);
+    }
+  } else {
+    const deltaX = mouse.x - dragStartPoint.x;
+    const deltaY = mouse.y - dragStartPoint.y;
+    
+    const rotationSpeed = 2;
+    selectedBone.rotation.x = dragStartBoneRotation.x + deltaY * rotationSpeed;
+    selectedBone.rotation.y = dragStartBoneRotation.y + deltaX * rotationSpeed;
+  }
+  
+  if (selectedModel) {
+    selectedModel.skeleton.pose();
+    selectedModel.updateMatrixWorld(true);
+  }
+  
+  updateBoneHelpers();
+  
+  event.preventDefault();
+}
+
+function handleBoneDragEnd() {
+  isDraggingBone = false;
+}
+
+function handleBoneSelection(e) {
+  const touch = e.touches[0];
+  const mouse = new THREE.Vector2();
+  mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+
+  const intersects = raycaster.intersectObjects(boneHelpers);
+  if (intersects.length > 0) {
+    selectedBone = intersects[0].object.userData.bone;
+    selectedModel = intersects[0].object.userData.model;
+    updateBoneSelection();
+    updateBoneButtons();
+  }
+}
+
+function handleBoneEditing() {
+  if (!selectedBone || controlMode !== 'bone') return;
+
+  const moveSpeed = 0.05;
+  const rotationSpeed = 0.03;
+
+  if (keys['w']) selectedBone.position.z -= moveSpeed;
+  if (keys['s']) selectedBone.position.z += moveSpeed;
+  if (keys['a']) selectedBone.position.x -= moveSpeed;
+  if (keys['d']) selectedBone.position.x += moveSpeed;
+  if (keys['q']) selectedBone.position.y += moveSpeed;
+  if (keys['e']) selectedBone.position.y -= moveSpeed;
+
+  if (keys['arrowup']) selectedBone.rotation.x -= rotationSpeed;
+  if (keys['arrowdown']) selectedBone.rotation.x += rotationSpeed;
+  if (keys['arrowleft']) selectedBone.rotation.y += rotationSpeed;
+  if (keys['arrowright']) selectedBone.rotation.y -= rotationSpeed;
+
+  if (selectedModel) {
+    selectedModel.skeleton.pose();
+    selectedModel.updateMatrixWorld(true);
+  }
+
+  updateBoneHelpers();
+}
+
+function updateBoneHelpers() {
+  boneHelpers.forEach(helper => {
+    const bone = helper.userData.bone;
+    const worldPos = new THREE.Vector3();
+    bone.getWorldPosition(worldPos);
+    helper.position.copy(worldPos);
+  });
+}
+
+function resetSelectedBone() {
+  if (selectedBone) {
+    selectedBone.position.set(0, 0, 0);
+    selectedBone.rotation.set(0, 0, 0);
+    selectedBone.scale.set(1, 1, 1);
+    
+    if (selectedModel) {
+      selectedModel.skeleton.pose();
+      selectedModel.updateMatrixWorld(true);
+    }
+    
+    updateBoneHelpers();
+  }
+}
+
+function updateBoneButtons() {
+  if (!selectedBone) return;
+  
+  const boneName = selectedBone.name.toLowerCase();
+  document.querySelectorAll('.bone-btn').forEach(btn => {
+    btn.classList.remove('active');
+    const boneType = btn.getAttribute('data-bone');
+    const possibleNames = boneMappings[boneType];
+    
+    if (possibleNames && possibleNames.some(name => boneName.includes(name.toLowerCase()))) {
+      btn.classList.add('active');
+    }
+  });
+}
+
+function reloadStoredPose(storageKey, model) {
+  if (!model) return;
+  const storedPose = localStorage.getItem(storageKey);
+  if (storedPose) {
+    try {
+      const pose = JSON.parse(storedPose);
+      applyPoseToModelFromStorage(model, pose);
+      showPoseReloadFeedback(storageKey);
+    } catch (error) {
+      console.error(`Error applying ${storageKey}:`, error);
+    }
+  }
+}
+
+function reloadBothStoredPoses() {
+  if (model1) reloadStoredPose('stor1', model1);
+  if (model2) reloadStoredPose('stor2', model2);
+  showPoseReloadFeedback('both');
+}
+
+function showPoseReloadFeedback(poseType) {
+  const feedback = document.createElement('div');
+  feedback.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:#8a8aff;padding:10px 20px;border-radius:10px;z-index:100;font-size:16px;font-weight:bold';
+  feedback.textContent = poseType === 'both' ? 'Both Poses Reloaded!' : `Pose ${poseType.slice(-1)} Reloaded!`;
+  document.body.appendChild(feedback);
+  setTimeout(() => document.body.removeChild(feedback), 1000);
+}
+
+function moveModelsUp() {
+  const moveSpeed = 0.5;
+  const targetModels = getTargetModels();
+  targetModels.forEach(model => {
+    if (model) {
+      model.position.y += moveSpeed;
+    }
+  });
+}
+
+function moveModelsDown() {
+  const moveSpeed = 0.5;
+  const targetModels = getTargetModels();
+  targetModels.forEach(model => {
+    if (model) {
+      model.position.y -= moveSpeed;
+    }
+  });
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  handleKeyboardInput();
+  renderer.render(scene, camera);
+}
+
+function init() {
+  helper = new THREE.MMDAnimationHelper();
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a1a2e);
+
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+  updateCameraPosition();
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.getElementById("container").appendChild(renderer.domElement);
+
+  // Add ambient light
+  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+  
+  scene.add(new THREE.GridHelper(20, 20));
+  scene.add(new THREE.AxesHelper(5));
+
+  loader = new THREE.MMDLoader();
+
+  setupTouchControls();
+  setupMouseControls();
+  setupKeyboardControls();
+  setupLightControls(); // Initialize light controls (includes sun and flood)
+
+  loadModels();
+
+  window.addEventListener("resize", onWindowResize);
+  document.getElementById("resetView").addEventListener("click", resetView);
+  document.getElementById("toggleWireframe").addEventListener("click", toggleWireframe);
+  document.getElementById("toggleMode").addEventListener("click", toggleControlMode);
+  document.getElementById("toggleBones").addEventListener("click", toggleBoneMode);
+  document.getElementById("reset-bones").addEventListener("click", resetSelectedBone);
+  
+  document.getElementById("move-bone").addEventListener("click", () => setBoneTransformMode('move'));
+  document.getElementById("rotate-bone").addEventListener("click", () => setBoneTransformMode('rotate'));
+  document.getElementById("reset-bone-transform").addEventListener("click", resetSelectedBone);
+  
+  document.querySelectorAll('.model-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentModel = this.getAttribute('data-model');
+      updateSelectedModel();
+    });
+  });
+
+  document.querySelectorAll('.bone-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (controlMode !== 'bone') return;
+      const boneType = this.getAttribute('data-bone');
+      selectBoneByType(boneType);
+    });
+  });
+
+  document.getElementById('reload-stor1').addEventListener('click', () => reloadStoredPose('stor1', model1));
+  document.getElementById('reload-stor2').addEventListener('click', () => reloadStoredPose('stor2', model2));
+  document.getElementById('reload-both').addEventListener('click', reloadBothStoredPoses);
+
+  document.getElementById('generate-state').addEventListener('click', generateState);
+
+  // Height control buttons
+  document.getElementById('move-up').addEventListener('click', moveModelsUp);
+  document.getElementById('move-down').addEventListener('click', moveModelsDown);
+
+  document.getElementById('help-btn').addEventListener('click', () => {
+    document.getElementById('help-overlay').style.display = 'block';
+  });
+  
+  document.getElementById('close-help').addEventListener('click', () => {
+    document.getElementById('help-overlay').style.display = 'none';
+  });
+
+  document.getElementById('close-gesture-help').addEventListener('click', () => {
+    document.getElementById('mobile-gesture-info').style.display = 'none';
+  });
+
+  if (/Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) {
+    setTimeout(() => {
+      document.getElementById('mobile-gesture-info').style.display = 'block';
+    }, 1000);
+  }
+
+  animate();
+}
+
+init();
+</script>
+</body>
+</html>
